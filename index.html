@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <title>Gestionale Cantiere</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Teko:wght@300;500;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+
+    <!-- PWA & MOBILE ICONS -->
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-title" content="Cantiere">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon"
+        href="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj">
+    <link rel="icon" type="image/x-icon"
+        href="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj">
+
+    <!-- FIX FULLSCREEN PWA ANDROID/IOS -->
+    <link rel="manifest"
+        href="data:application/manifest+json,%7B%22name%22%3A%22Cantiere%22%2C%22short_name%22%3A%22Cantiere%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a0a%22%2C%22theme_color%22%3A%22%23000000%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fyt3.googleusercontent.com%2Fytc%2FAIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ%3Ds160-c-k-c0x00ffffff-no-rj%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+
+</head>
+
+<body>
+
+    <!-- LOADER (Inlined styles in head to prevent FOUC) -->
+    <style>
+        #loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 5000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loader-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loader-gear {
+            font-size: 100px;
+            color: #222;
+            animation: spin 4s linear infinite;
+            position: absolute;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.1));
+        }
+
+        .loader-wrench {
+            font-size: 50px;
+            color: #FFD700;
+            position: absolute;
+            animation: rock 2s ease-in-out infinite;
+            transform-origin: center;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rock {
+            0% {
+                transform: rotate(-20deg);
+            }
+
+            50% {
+                transform: rotate(20deg);
+            }
+
+            100% {
+                transform: rotate(-20deg);
+            }
+        }
+    </style>
+    <div id="loader-overlay">
+        <div class="loader-container">
+            <i class="bi bi-gear-fill loader-gear"></i>
+            <i class="bi bi-wrench-adjustable loader-wrench"></i>
+        </div>
+        <div
+            style="margin-top:30px; font-family:'Teko'; font-size:36px; color:white; letter-spacing:4px; text-shadow: 0 0 20px rgba(255,215,0,0.3)">
+            CARICAMENTO...
+        </div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="active-screen bg-steel-login">
+        <div class="vignette"></div>
+        <div class="login-container">
+            <div class="brand-stripe"></div>
+            <img src="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj"
+                class="logo-circle">
+            <h1 class="brand-title">
+                <span style="white-space: nowrap;"><span style="font-size: 0.6em; vertical-align: middle;">🚧🚧</span>
+                    CANTIERE <span style="font-size: 0.6em; vertical-align: middle;">🚧🚧</span></span>
+                <span style="color:var(--accent); white-space: nowrap;"><span
+                        style="font-size: 0.6em; vertical-align: middle;">🔨</span> HAMBIRRERIA <span
+                        style="font-size: 0.6em; vertical-align: middle;">🔨</span></span>
+            </h1>
+
+            <form onsubmit="event.preventDefault(); attemptLogin();" style="width: 100%;">
+                <div class="input-wrap">
+                    <i class="bi bi-person-fill"></i>
+                    <input type="text" id="username" placeholder="IDENTIFICATIVO" autocomplete="username">
+                </div>
+                <div class="input-wrap">
+                    <i class="bi bi-key-fill"></i>
+                    <input type="password" id="password" placeholder="PASSWORD" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-neon w-100 mt-10" style="margin-top: 20px;">ENTRA NEL SISTEMA</button>
+            </form>
+            <button class="btn-install" onclick="showInstallHelp()">
+                <i class="bi bi-apple"></i>
+                INSTALLA APP
+                <i class="bi bi-android2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- APP SCREEN -->
+    <div id="app-screen" style="display:none;" class="bg-app-main">
+
+        <!-- TOP BAR -->
+        <div class="top-header" style="justify-content:flex-start">
+            <img src="https://i.imgur.com/rgc71OX.png" class="mobile-logo" style="display:none;" alt="Logo">
+
+            <div class="mobile-header-row">
+                <div class="header-title" id="header-page-title" onclick="openPagePicker()">MAGAZZINO</div>
+                <div class="user-badge" id="user-display" onclick="logoutConfirm()"></div>
+            </div>
+
+            <div class="header-controls">
+                <!-- Add Chat Button -->
+                <button class="icon-btn" onclick="toggleChat()" style="position:relative; margin:0; padding:5px">
+                    <i class="bi bi-chat-text-fill"></i>
+                    <span id="chat-badge"
+                        style="display:none; position:absolute; top:0px; right:0px; background:var(--accent); color:black; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:8px; line-height:16px; text-align:center; padding:0 4px">0</span>
+                </button>
+
+                <!-- Notifications Button -->
+                <button id="btn-notifications" class="admin-only hidden"
+                    style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer; position:relative; margin:0; padding:5px"
+                    onclick="openNotifications()">
+                    <i class="bi bi-bell-fill"></i>
+                    <span id="notif-badge"
+                        style="position:absolute; top:0; right:0; background:var(--danger); color:white; font-size:10px; border-radius:50%; padding:2px 5px; font-family:'Roboto'; display:none">0</span>
+                </button>
+
+                <!-- SEGNALA INCONGRUENZA - icona rossa per tutti i ruoli -->
+                <button id="btn-segnala" class="icon-btn" onclick="openMismatchModal()"
+                    style="background:none; border:none; color:#FF2222; font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,34,34,0.7);"
+                    title="Segnala Incongruenza">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </button>
+            </div>
+
+            <button class="icon-btn header-menu-btn" onclick="toggleMenu()"><i class="bi bi-list"></i></button>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div id="sidebar-overlay" onclick="toggleMenu()"></div>
+        <div id="sidebar">
+            <div class="sidebar-handle" onclick="toggleMenu()">
+                <i class="bi bi-list" style="font-size: 13px;"></i>
+                <i class="bi bi-chevron-right" style="font-size: 9px; margin-left: -4px;"></i>
+            </div>
+            <div class="sidebar-top"
+                style="display:flex; flex-wrap:nowrap; align-items:center; gap:10px; padding-top:8px;">
+                <img src="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj"
+                    style="width:36px; height:36px; border-radius:6px; object-fit:cover; flex-shrink:0;">
+                <h2 id="menu-title"
+                    style="margin:0; color:var(--accent); font-family:'Teko'; font-size:30px; line-height:1; text-align:left; white-space:nowrap;">
+                    MENU ADMIN</h2>
+            </div>
+            <div class="nav-links">
+                <a onclick="nav('dashboard')" id="nav-dashboard"><i class="bi bi-box-seam"></i> Magazzino</a>
+                <a onclick="nav('operations')" id="nav-operations"><i class="bi bi-arrow-left-right"></i> Operazioni</a>
+                <a onclick="nav('dailylist')" id="nav-dailylist"><i class="bi bi-clipboard-check"></i> Lista
+                    Giornaliera&nbsp;Cucina</a>
+
+                <!-- ADMIN SECTION -->
+                <div class="admin-section hidden" id="admin-menu"
+                    style="border-top:1px solid #333; margin-top:10px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.1));">
+                    <div
+                        style="margin: 6px 15px 10px 15px; padding: 3px 15px; color:#000; font-size:22px; font-weight:bold; background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 15px, #d4af37 15px, #d4af37 30px); text-align:center; letter-spacing:1px; font-family:'Teko'; border:2px solid #000; border-radius: 8px; text-shadow: 1px 1px 0px rgba(255,255,255,0.3); box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.5);">
+                        <i class="bi bi-cone-striped" style="margin-right:8px;"></i>ADMIN<i class="bi bi-cone-striped"
+                            style="margin-left:8px;"></i>
+                    </div>
+
+                    <a onclick="nav('admin-warehouses')" id="nav-admin-warehouses"><i class="bi bi-box"></i> Gestione
+                        Magazzini</a>
+                    <a onclick="nav('admin-products')" id="nav-admin-products"><i class="bi bi-boxes"></i> Gestione
+                        Prodotti</a>
+                    <a onclick="nav('admin-movements-log')" id="nav-admin-movements-log"><i class="bi bi-table"></i>
+                        Registro Movimenti</a>
+                    <a onclick="nav('admin-users')" id="nav-admin-users"><i class="bi bi-people-fill"></i> Gestione
+                        Utenti</a>
+                    <a onclick="nav('admin-reports')" id="nav-admin-reports"><i
+                            class="bi bi-file-earmark-bar-graph"></i> Reports Giornalieri</a>
+                    <a onclick="nav('admin-notices')" id="nav-admin-notices"><i class="bi bi-megaphone-fill"></i>
+                        Gestione Avvisi</a>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn-logout" onclick="logout()">DISCONNESSIONE</button>
+            </div>
+        </div> <!-- closes sidebar -->
+
+        <!-- MAIN CONTENT WRAPPER -->
+        <div id="main-content">
+            <div class="desktop-wrapper">
+
+                <!-- DASHBOARD -->
+                <div id="page-dashboard" class="page">
+                    <div class="cantiere-filters">
+                        <div id="filters-collapse-area" class="collapsed">
+                            <div class="search-wrapper"
+                                style="margin-bottom:6px; display:flex; justify-content:center; gap:6px;">
+                                <div style="position:relative; width:100%; max-width:260px;">
+                                    <i class="bi bi-search"
+                                        style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--accent); pointer-events:none;"></i>
+                                    <input type="text" id="dash-search" class="dark-input"
+                                        placeholder="Cerca prodotto..." onkeyup="renderDashboard()"
+                                        style="height:32px; padding:4px 10px 4px 30px; font-size:14px; text-align:center; width:100%; box-sizing:border-box;">
+                                </div>
+                                <!-- Admin solo: filtro fornitori vicino alla barra di ricerca -->
+                                <div class="admin-only hidden" style="width:100%; max-width:140px;">
+                                    <select id="dash-supp-filter" class="dark-select" onchange="renderDashboard()"
+                                        style="height:32px; padding:2px; font-size:10px; width:100%;">
+                                        <option value="ALL">FORNITORI...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:8px; margin-bottom:6px; justify-content:center;">
+                                <select id="dash-wh-filter" class="dark-select" onchange="renderDashboard()"
+                                    style="height:32px; padding:2px; font-size:12px; width:100%; max-width:170px;">
+                                    <option value="ALL">TUTTI I MAGAZZINI</option>
+                                </select>
+                                <select id="dash-cat-filter" class="dark-select" onchange="renderDashboard()"
+                                    style="height:32px; padding:2px; font-size:12px; width:100%; max-width:170px;">
+                                    <option value="ALL">TUTTE LE CATEGORIE</option>
+                                </select>
+                            </div>
+
+                            <div id="admin-filters" class="hidden" style="border-top:1px solid #333; padding-top:8px">
+                                <div style="display:flex; justify-content:center;">
+                                    <button class="btn-neon" onclick="printStock()"
+                                        style="width:auto; font-size:10px !important; background:#333; color:white; border:1px solid var(--accent); padding:4px 14px !important; white-space:nowrap;"><i
+                                            class="bi bi-printer"></i> STAMPA GIACENZA</button>
+                                </div>
+                            </div>
+
+                        </div> <!-- chiude filters-collapse-area -->
+                        <div class="filters-toggle-btn" onclick="toggleDashboardFilters()">
+                            <div id="filters-preview" class="filters-preview"></div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <i class="bi bi-funnel-fill" style="font-size:14px;"></i>
+                                <i class="bi bi-chevron-down" id="filters-toggle-icon"></i>
+                            </div>
+                        </div>
+                    </div> <!-- chiude cantiere-filters -->
+
+                    <div id="dashboard-grid" class="grid-container"></div>
+                </div> <!-- chiude page-dashboard -->
+
+
+
+                <!-- LISTA GIORNALIERA -->
+                <div id="page-dailylist" class="page">
+                    <div
+                        style="background: linear-gradient(to bottom, #4a4a4a 0%, #2b2b2b 50%, #1a1a1a 51%, #111 100%); border: 1px solid #555; border-radius: 12px; padding: 12px; margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 5px 15px rgba(0,0,0,0.5); text-align: center;">
+                        <h3
+                            style="margin: 0; color: #f1f1f1; font-family: 'Teko', sans-serif; letter-spacing: 2px; font-size: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; gap:10px;">
+                            <i class="bi bi-list-ul" style="color:var(--accent);"></i> GIORNALIERO
+                        </h3>
+                    </div>
+
+                    <div
+                        style="background: transparent; border: 1px dashed var(--accent); padding: 12px; margin-bottom: 20px; border-radius: 8px; text-align: center;">
+                        <span style="color:var(--accent); font-size:16px; display:block; margin-bottom:6px;"><i
+                                class="bi bi-lightbulb-fill"></i></span>
+                        <span style="color:#ccc; font-size:13px; line-height:1.5;">Clicca sui prodotti sottostanti per
+                            dichiarare le giacenze attuali e aggiornare la <b>bozza collaborativa</b> in tempo
+                            reale.</span>
+                    </div>
+
+                    <div class="scrolling-tabs" id="dept-tabs"></div>
+                    <div id="daily-list-body" style="padding-bottom:80px"></div>
+                </div>
+
+
+                <!-- OPERATIONS (Single Column) -->
+                <div id="page-operations" class="page">
+                    <div class="narrow-content-wrapper cantiere-container">
+                        <div class="industrial-header">
+                            <h3
+                                style="color:var(--accent); margin:0; font-family:'Teko'; font-size:28px; letter-spacing:2px; display:flex; justify-content:center; align-items:center; gap:10px;">
+                                <i class="bi bi-hammer"></i>REGISTRA MOVIMENTO
+                            </h3>
+                        </div>
+
+                        <div class="tool-wrap"
+                            style="text-align:center; display:flex; flex-direction:column; gap:5px; padding:8px; margin-bottom:5px;">
+                            <div style="margin-bottom:5px;">
+                                <span class="industrial-label"
+                                    style="font-size:14px; color:#fff; text-shadow:0 0 5px rgba(255,255,255,0.4); font-weight:900; margin-bottom:2px;">OPERAZIONE</span>
+                                <select id="op-type-select" class="dark-input" onchange="updateOpTypeUI()"
+                                    style="border-left:4px solid var(--accent); font-weight:bold; letter-spacing:1px; text-align:center; text-align-last:center; width:100%; max-width:300px; margin:0 auto; padding:6px; font-size:14px;">
+                                </select>
+                            </div>
+
+                            <!-- WAREHOUSE SELECTORS HIDDEN (Spostati nel popup) -->
+                            <div id="op-wh-grid" style="display:none;">
+                                <select id="op-from-wh" class="hidden"></select>
+                                <select id="op-to-wh" class="hidden"></select>
+                            </div>
+                        </div>
+
+                        <div class="tool-wrap" style="padding:8px; margin-bottom:5px;">
+                            <div id="op-cat-chips"
+                                style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; margin-bottom:4px; -webkit-overflow-scrolling:touch;">
+                            </div>
+                            <div id="op-active-filter-label"
+                                style="text-align:center; font-family:'Teko'; font-size:13px; color:#888; letter-spacing:1px; margin-bottom:6px;">
+                                FILTRO ATTIVO: <span style="color:var(--accent)">TUTTI</span></div>
+
+                            <div class="search-wrapper" style="margin-bottom:8px">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="op-search" class="dark-input search-tool"
+                                    placeholder="CERCA PRODOTTO..." onkeyup="renderOpSearch()"
+                                    style="padding:8px; font-size:14px;">
+                            </div>
+
+                            <div id="op-prod-list"
+                                style="max-height:280px; overflow-y:auto; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+                            </div>
+                        </div>
+
+                        <!-- MOBILE CART OVERLAY -->
+                        <div id="cart-overlay" class="cart-overlay" onclick="toggleCartDrawer()"></div>
+
+                        <!-- CART CONTAINER (Inline on Desktop, Drawer on Mobile) -->
+                        <div id="op-cart-container">
+                            <div class="cart-drawer-handle" onclick="toggleCartDrawer()" style="padding-top:18px;">
+                                <i class="bi bi-chevron-up" id="cart-handle-icon" style="font-size:14px;"></i>
+                                <i class="bi bi-clipboard-data" style="font-size:14px;"></i>
+                                CODA OPERAZIONI
+                            </div>
+
+
+
+                            <button id="btn-confirm-op" class="btn-neon" onclick="submitOpMovements()"
+                                style="width:auto; display:none; align-self:center; background:var(--accent); color:black; border:none; box-shadow: 0 4px 15px rgba(255,215,0,0.2); margin:0 auto 8px auto; padding:7px 20px; font-size:14px;">
+                                <i class="bi bi-check-circle-fill"></i> CONFERMA E REGISTRA
+                            </button>
+
+                            <div id="op-cart-list"
+                                style="max-height:450px; overflow-y:auto; margin-bottom:0; color:#666; font-style:italic; padding:10px; text-align:center;">
+                                Lista vuota...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADMIN REGISTRO MOVIMENTI (Log Table) -->
+                <div id="page-admin-movements-log" class="page">
+                    <h3 class="page-title"><i class="bi bi-journal-text"></i> MOVIMENTI</h3>
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left; width: 15%">DATA</th>
+                                    <th style="text-align:center; width: 15%">TIPO</th>
+                                    <th style="text-align:left; width: 25%">PRODOTTO</th>
+                                    <th style="text-align:center; width: 15%">QUANTITÀ</th>
+                                    <th style="text-align:center; width: 10%"><i class="bi bi-gear-wide-connected"></i>
+                                        TOTAL PZ</th>
+                                    <th style="text-align:center; width: 15%">PERCORSO</th>
+                                    <th style="text-align:right; width: 5%">USER</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mov-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ADMIN PRODOTTI (Restored) -->
+                <div id="page-admin-products" class="page">
+                    <div class="search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="admin-prod-search" class="dark-input" placeholder="Cerca prodotto..."
+                            onkeyup="renderAdminProds()">
+                    </div>
+                    <div id="admin-prod-list" style="padding-bottom:50px"></div>
+                </div>
+                <!-- ADMIN UTENTI -->
+                <div id="page-admin-users" class="page">
+                    <h3 style="color:var(--accent)"><i class="bi bi-gear-fill"></i> UTENTI</h3>
+                    <button class="btn-neon" style="font-size:18px; margin-bottom:20px" onclick="openUserModal()">+
+                        NUOVO UTENTE</button>
+                    <div id="admin-users-list"></div>
+                </div>
+
+                <!-- ADMIN REPORTS -->
+                <div id="page-admin-reports" class="page" style="max-width:600px; margin:0 auto">
+
+                    <div
+                        style="background: linear-gradient(to bottom, #4a4a4a 0%, #2b2b2b 50%, #1a1a1a 51%, #111 100%); border: 1px solid #555; border-radius: 12px; padding: 12px; margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 5px 15px rgba(0,0,0,0.5); text-align: center;">
+                        <h3
+                            style="margin: 0; color: #f1f1f1; font-family: 'Teko', sans-serif; letter-spacing: 2px; font-size: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; gap:10px;">
+                            <i class="bi bi-clock-history" style="color:var(--accent);"></i> ARCHIVIO GIORNALIERI
+                        </h3>
+                    </div>
+
+                    <div
+                        style="background: transparent; border: 1px dashed var(--accent); padding: 12px; margin-bottom: 25px; border-radius: 8px; text-align: center;">
+                        <span style="color:var(--accent); font-size:16px; display:block; margin-bottom:6px;"><i
+                                class="bi bi-info-circle-fill"></i> STORICO REPORT</span>
+                        <span style="color:#ccc; font-size:13px; line-height:1.5;">Qui trovi la lista giornaliera della
+                            cucina. Clicca su una data per visualizzare giacenze, confrontarle e stamparle.</span>
+                    </div>
+
+                    <div
+                        style="margin-bottom:25px; background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #222; display:flex; flex-direction:column; align-items:center;">
+                        <label
+                            style="color:var(--accent); font-size:12px; font-weight:bold; letter-spacing:1px; margin-bottom:8px;"><i
+                                class="bi bi-funnel-fill"></i> FILTRO FORNITORE</label>
+                        <select id="report-supp-filter" class="dark-input" onchange="loadReports()"
+                            style="text-align:center; max-width:80%;">
+                            <option value="ALL">TUTTI I FORNITORI</option>
+                        </select>
+                    </div>
+
+                    <div id="report-view-body"
+                        style="padding-bottom:50px; display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+                <!-- ADMIN WAREHOUSES -->
+                <div id="page-admin-warehouses" class="page">
+                    <div style="max-width: 600px; margin: 0 auto; padding:15px">
+                        <h3
+                            style="color:var(--accent); margin-bottom:15px; font-family:'Teko'; font-size:28px; text-align:center;">
+                            <i class="bi bi-gear-fill"></i> MAGAZZINI
+                        </h3>
+                        <p style="color:#aaa; font-size:14px; margin-bottom:20px; text-align:center;">Modifica i
+                            nomi
+                            dei magazzini
+                            in uso. Il cambio nome si propagherà nell'inventario.</p>
+                        <div id="admin-warehouses-list" style="display:flex; flex-direction:column; gap:10px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: GESTIONE AVVISI (admin-only) ===== -->
+                <div id="page-admin-notices" class="page" style="display:none;">
+                    <div style="width:100%; max-width:860px; margin:0 auto; padding:20px; box-sizing:border-box;">
+
+                        <div class="industrial-header" style="margin-bottom:20px;">
+                            <h2 class="industrial-label" style="padding:15px; margin:0;">
+                                <i class="bi bi-megaphone-fill"></i> GESTIONE AVVISI
+                            </h2>
+                        </div>
+
+                        <!-- CREA AVVISO -->
+                        <div
+                            style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:18px; margin-bottom:24px;">
+                            <h4
+                                style="color:var(--accent); font-family:'Teko'; font-size:22px; margin:0 0 12px 0; letter-spacing:1px;">
+                                <i class="bi bi-plus-circle"></i> NUOVO AVVISO
+                            </h4>
+
+                            <!-- Toolbar rich text -->
+                            <div class="notice-toolbar">
+                                <!-- Formattazione testo -->
+                                <button class="notice-tool-btn" data-cmd="bold"
+                                    onclick="document.execCommand('bold'); updateNoticeToolbar()"
+                                    title="Grassetto"><b>B</b></button>
+                                <button class="notice-tool-btn" data-cmd="italic"
+                                    onclick="document.execCommand('italic'); updateNoticeToolbar()"
+                                    title="Corsivo"><i>I</i></button>
+                                <button class="notice-tool-btn" data-cmd="underline"
+                                    onclick="document.execCommand('underline'); updateNoticeToolbar()"
+                                    title="Sottolineato"><u>U</u></button>
+                                <button class="notice-tool-btn" data-cmd="strikeThrough"
+                                    onclick="document.execCommand('strikeThrough'); updateNoticeToolbar()"
+                                    title="Barrato" style="text-decoration:line-through;">S</button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <!-- Allineamento -->
+                                <button class="notice-tool-btn" data-cmd="justifyLeft"
+                                    onclick="document.execCommand('justifyLeft'); updateNoticeToolbar()"
+                                    title="Allinea a sinistra"><i class="bi bi-text-left"></i></button>
+                                <button class="notice-tool-btn" data-cmd="justifyCenter"
+                                    onclick="document.execCommand('justifyCenter'); updateNoticeToolbar()"
+                                    title="Centra"><i class="bi bi-text-center"></i></button>
+                                <button class="notice-tool-btn" data-cmd="justifyRight"
+                                    onclick="document.execCommand('justifyRight'); updateNoticeToolbar()"
+                                    title="Allinea a destra"><i class="bi bi-text-right"></i></button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <!-- Colori -->
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#FFD700')"
+                                    title="Testo dorato" style="color:#FFD700;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#ff4d4d')"
+                                    title="Testo rosso" style="color:#ff4d4d;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#4dff88')"
+                                    title="Testo verde" style="color:#4dff88;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#88ccff')"
+                                    title="Testo azzurro" style="color:#88ccff;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#eee')"
+                                    title="Colore normale">A</button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <button class="notice-tool-btn"
+                                    onclick="document.getElementById('notice-editor').innerHTML=''"
+                                    title="Cancella tutto"><i class="bi bi-trash"></i></button>
+                            </div>
+
+                            <!-- Area testo ricco -->
+                            <div id="notice-editor" contenteditable="true" spellcheck="false"
+                                placeholder="Scrivi il testo dell'avviso..."></div>
+
+                            <!-- Durata + pubblica -->
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <div style="flex:1; min-width:180px;">
+                                    <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">DURATA
+                                        AVVISO</label>
+                                    <select id="notice-duration" class="dark-select"
+                                        style="width:100%; font-size:13px; height:36px; padding:4px 8px;">
+                                        <option value="1">1 ora</option>
+                                        <option value="4">4 ore</option>
+                                        <option value="8">8 ore</option>
+                                        <option value="24" selected>24 ore</option>
+                                        <option value="48">48 ore</option>
+                                        <option value="168">7 giorni</option>
+                                        <option value="0">Fino a eliminazione</option>
+                                    </select>
+                                </div>
+                                <button class="btn-neon" style="margin-top:18px; padding:8px 24px;"
+                                    onclick="publishNotice()">
+                                    <i class="bi bi-send-fill"></i> PUBBLICA AVVISO
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- AVVISI ATTIVI -->
+                        <div style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:18px;">
+                            <h4
+                                style="color:var(--accent); font-family:'Teko'; font-size:22px; margin:0 0 14px 0; letter-spacing:1px;">
+                                <i class="bi bi-list-ul"></i> AVVISI ATTIVI
+                            </h4>
+                            <div id="notices-list">
+                                <div style="text-align:center; color:#555; padding:20px; font-style:italic;">
+                                    Caricamento...</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- ===== END PAGE NOTICES ===== -->
+
+            </div>
+            <!-- ===== END PAGE NOTICES ===== -->
+
+        </div> <!-- End of .main-content -->
+    </div> <!-- End of .app-container -->
+
+
+
+    <!-- MODAL REPORT PRINT -->
+    <div id="modal-report-print" class="modal">
+        <div class="modal-body" style="max-width:360px; color:white; padding:15px 10px">
+            <div class="modal-header" style="justify-content: center; position: relative">
+                <span style="color:var(--accent); font-family:'Teko'; letter-spacing:1px; font-size:24px">DETTAGLIO
+                    REPORT</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-report-print')"
+                    style="position: absolute; right: 15px"></i>
+            </div>
+            <div id="report-print-content"
+                style="max-height:60vh; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; align-items:center">
+            </div>
+            <button class="btn-neon" onclick="printReportDiv()">STAMPA</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PROD -->
+    <div id="modal-edit-prod" class="modal">
+        <div class="modal-body">
+            <div class="modal-header">
+                <span>MODIFICA</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-edit-prod')"></i>
+            </div>
+            <div id="edit-form-content"></div>
+            <button class="btn-neon" style="margin-top:20px" onclick="saveProductEdits()">SALVA
+                MODIFICHE</button>
+
+
+        </div>
+    </div>
+
+    <!-- MODAL USER -->
+    <div id="modal-user" class="modal">
+        <div class="modal-body">
+            <div class="modal-header">
+                <span>UTENTE</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-user')"></i>
+            </div>
+            <input type="hidden" id="user-old-name">
+            <input id="user-name" class="dark-input" placeholder="Username" style="margin-bottom:10px">
+            <input id="user-pass" class="dark-input" placeholder="Password" style="margin-bottom:10px">
+            <select id="user-role" class="dark-select">
+                <option value="User">User</option>
+                <option value="Admin">Admin</option>
+            </select>
+            <button class="btn-neon" onclick="saveUser()" style="margin-top:20px">SALVA</button>
+        </div>
+    </div>
+
+    <!-- MODAL INCONGRUENZA -->
+    <div id="modal-mismatch" class="modal">
+        <div class="modal-body">
+            <div class="modal-header">
+                <span>SEGNALA INCONGRUENZA</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-mismatch')"></i>
+            </div>
+
+            <div class="modal-form-group">
+                <label>PRODOTTO</label>
+                <input type="text" id="mismatch-search" class="dark-input search-tool" placeholder="Cerca prodotto..."
+                    onkeyup="filterMismatchProds()" style="margin-bottom:10px; font-size:14px">
+                <select id="mismatch-product" class="dark-input" style="text-align:left; font-size:16px"></select>
+            </div>
+
+            <div class="modal-form-group">
+                <label>MAGAZZINO FISICO</label>
+                <select id="mismatch-warehouse" class="dark-input" style="text-align:center"></select>
+            </div>
+
+            <div class="modal-form-group">
+                <label>NOTE / DISCREPANZA RISCONTRATA</label>
+                <textarea id="mismatch-notes" class="dark-input" style="height:100px; text-align:left; resize:none"
+                    placeholder="Es: 'Sul gestionale segna 5 pezzi ma in realtà ce ne sono 3' ..."></textarea>
+            </div>
+
+            <button class="btn-neon" onclick="submitMismatch()"
+                style="margin-top:20px; background:var(--danger); color:white; border:none"><i
+                    class="bi bi-send-fill"></i> INVIA SEGNALAZIONE</button>
+        </div>
+    </div>
+
+    <!-- MODAL DASHBOARD NOTIFICHE -->
+    <div id="modal-notifications" class="modal">
+        <div class="modal-body" style="max-height:80vh; display:flex; flex-direction:column">
+            <div class="modal-header">
+                <span>NOTIFICHE ADMIN</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-notifications')"></i>
+            </div>
+            <div id="notif-list" style="overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:10px">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- End of #app-screen -->
+
+    <!-- CHAT DRAWER -->
+    <div id="chat-drawer">
+        <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color:var(--accent); font-family:'Teko'; letter-spacing:1px; font-size:22px; line-height:1;"><i
+                    class="bi bi-chat-dots-fill"></i> CANTIERE CHAT</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <!-- SVUOTA TUTTO will only be appended here by JS for Admins later, but we keep its default position relative -->
+                <button class="btn-clear-chat" onclick="clearChat()" id="btn-admin-clear-chat"><i
+                        class="bi bi-trash"></i> SVUOTA TUTTO</button>
+                <i class="bi bi-x-lg close-icon" onclick="toggleChat()" style="font-size:20px;"></i>
+            </div>
+        </div>
+        <div id="chat-messages"></div>
+        <div class="chat-input-area">
+            <div class="emoji-bar">
+                <button class="emoji-btn" onclick="addEmoji('✅')">✅</button>
+                <button class="emoji-btn" onclick="addEmoji('⚠️')">⚠️</button>
+                <button class="emoji-btn" onclick="addEmoji('📦')">📦</button>
+                <button class="emoji-btn" onclick="addEmoji('🚚')">🚚</button>
+                <button class="emoji-btn" onclick="addEmoji('😂')">😂</button>
+                <button class="emoji-btn" onclick="addEmoji('👍')">👍</button>
+            </div>
+            <!-- @MENTION: no inline dropdown, uses SweetAlert popup -->
+
+            <div style="display:flex; gap:10px; position:relative;">
+                <input type="text" id="chat-input" class="dark-input"
+                    placeholder="Scrivi un messaggio... (@nome per taggare)" oninput="handleChatInput(event)"
+                    onkeyup="handleChatKeyUp(event)" onkeydown="handleChatKeyDown(event)">
+                <button class="icon-btn"
+                    style="background:var(--accent); color:black; border-radius:4px; padding:0 15px; font-size:20px"
+                    onclick="sendChatMessage()">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+
+</html>
