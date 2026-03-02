@@ -139,6 +139,16 @@ function performPageSwitch(page) {
         }
     }
 
+    // GESTIONE VISIBILITA' DEL CARRELLO ROOT
+    const rootCart = document.getElementById('op-cart-container');
+    if (rootCart) {
+        if (page === 'operations') {
+            rootCart.style.display = 'flex';
+        } else {
+            rootCart.style.display = 'none';
+        }
+    }
+
     const labels = {
         'dashboard': 'MAGAZZINO',
         'operations': 'OPERAZIONI',
