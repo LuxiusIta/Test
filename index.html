@@ -358,29 +358,8 @@
                             </div>
                         </div>
 
-                        <!-- MOBILE CART OVERLAY -->
-                        <div id="cart-overlay" class="cart-overlay" onclick="toggleCartDrawer()"></div>
-
-                        <!-- CART CONTAINER (Inline on Desktop, Drawer on Mobile) -->
-                        <div id="op-cart-container">
-                            <div class="cart-drawer-handle" onclick="toggleCartDrawer()" style="padding-top:18px;">
-                                <i class="bi bi-chevron-up" id="cart-handle-icon" style="font-size:14px;"></i>
-                                <i class="bi bi-clipboard-data" style="font-size:14px;"></i>
-                                CODA OPERAZIONI
-                            </div>
-
-
-
-                            <button id="btn-confirm-op" class="btn-neon" onclick="submitOpMovements()"
-                                style="width:auto; display:none; align-self:center; background:var(--accent); color:black; border:none; box-shadow: 0 4px 15px rgba(255,215,0,0.2); margin:0 auto 8px auto; padding:7px 20px; font-size:14px;">
-                                <i class="bi bi-check-circle-fill"></i> CONFERMA E REGISTRA
-                            </button>
-
-                            <div id="op-cart-list"
-                                style="max-height:450px; overflow-y:auto; margin-bottom:0; color:#666; font-style:italic; padding:10px; text-align:center;">
-                                Lista vuota...
-                            </div>
-                        </div>
+                        <!-- MOBILE CART OVERLAY (Spostato a fine body) -->
+                        <!-- CART CONTAINER (Spostato a fine body) -->
                     </div>
                 </div>
 
@@ -720,11 +699,32 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-client.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/inventory.js"></script>
     <script src="js/ui.js"></script>
+
+    <!-- MOBILE CART OVERLAY -->
+    <div id="cart-overlay" class="cart-overlay" onclick="toggleCartDrawer()"></div>
+
+    <!-- CART CONTAINER (Inline on Desktop, Drawer on Mobile) -->
+    <div id="op-cart-container">
+        <div class="cart-drawer-handle" onclick="toggleCartDrawer()" style="padding-top:18px;">
+            <i class="bi bi-chevron-up" id="cart-handle-icon" style="font-size:14px;"></i>
+            <i class="bi bi-clipboard-data" style="font-size:14px;"></i>
+            CODA OPERAZIONI
+        </div>
+
+        <button id="btn-confirm-op" class="btn-neon" onclick="submitOpMovements()"
+            style="width:auto; display:none; align-self:center; background:var(--accent); color:black; border:none; box-shadow: 0 4px 15px rgba(255,215,0,0.2); margin:0 auto 8px auto; padding:7px 20px; font-size:14px;">
+            <i class="bi bi-check-circle-fill"></i> CONFERMA E REGISTRA
+        </button>
+
+        <div id="op-cart-list"
+            style="max-height:450px; overflow-y:auto; margin-bottom:0; color:#666; font-style:italic; padding:10px; text-align:center;">
+            Lista vuota...
+        </div>
+    </div>
 </body>
 
 </html>
