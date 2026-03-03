@@ -143,9 +143,9 @@ function performPageSwitch(page) {
     const rootCart = document.getElementById('op-cart-container');
     if (rootCart) {
         if (page === 'operations') {
-            rootCart.style.display = 'flex';
+            rootCart.classList.remove('global-hidden');
         } else {
-            rootCart.style.display = 'none';
+            rootCart.classList.add('global-hidden');
         }
     }
 

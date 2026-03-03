@@ -1049,6 +1049,10 @@ body.no-scroll {
     display: block;
 }
 
+.global-hidden {
+    display: none !important;
+}
+
 .admin-view .chat-msg {
     padding-right: 30px;
     /* Spazio per evitare che il testo collida con il cestino */
@@ -1139,8 +1143,7 @@ body.no-scroll {
         padding: 0 15px calc(15px + env(safe-area-inset-bottom, 0px)) 15px;
         box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.8), inset 0 3px 0 var(--accent);
         border-radius: 16px 16px 0 0;
-        display: none;
-        /* Changed from flex to none. Managed by ui.js performPageSwitch */
+        display: flex;
         flex-direction: column;
         /* Lasciamo spuntare 38px (solo il manico) + la safe-area */
         transform: translateY(calc(100% - 38px - env(safe-area-inset-bottom, 0px)));
