@@ -97,6 +97,8 @@ function initUserSession(roleData) {
                 enable: false,
             },
             allowLocalhostAsSecureOrigin: true,
+            // Forza la visualizzazione del banner di sistema anche se l'app è aperta
+            allow_message_focus: true
         });
 
         if (USER && USER.username) {
