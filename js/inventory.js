@@ -851,20 +851,147 @@ async function loadMovementsLog() {
     const { data: logs, error } = await dbClient.from('movements').select('*').order('created_at', { ascending: false }).limit(100);
     showLoader(false);
     if (error) return console.error(error);
-    const tbody = document.getElementById('mov-log-body'); tbody.innerHTML = '';
+    const tbody = document.getElementById('mov-log-body');
+    tbody.innerHTML = '';
+
+    if (logs.length === 0) {
+        tbody.innerHTML = '<div style="text-align:center; color:#888; padding:30px; font-style:italic;">Nessun movimento registrato.</div>';
+        return;
+    }
+
     logs.forEach(l => {
         const dt = new Date(l.created_at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
         const pInfo = DB.products.find(x => x.Nome === l.product_name) || { Pezzi_per_Cartone: 1, Pezzi_per_Pacco: 1 };
         const tot = l.qty_string.match(/Tot:\s*(\d+)/)?.[1] || 0;
-        tbody.innerHTML += `<tr>
-                <td style="text-align:left">${dt}</td>
-                <td style="text-align:center"><span class="badge-type ${l.type.includes('CUCINA') ? 'badge-red' : 'badge-green'}">${l.type}</span></td>
-                <td style="text-align:left"><b style="color:white">${l.product_name}</b></td>
-                <td style="text-align:center">${renderQtyBadges(parseInt(tot), pInfo)}</td>
-                <td style="text-align:center"><i class="bi bi-gear-wide-connected" style="color:var(--accent)"></i> <b>${tot}</b></td>
-                <td style="text-align:center"><span style="color:#888">${l.from_wh}</span> <i class="bi bi-arrow-right-circle-fill" style="color:var(--accent); font-size:12px"></i> <span style="color:#888">${l.to_wh}</span></td>
-                <td style="font-size:11px; color:#666; text-align:right">${l.user_name}</td>
-            </tr>`;
+
+        // Determina Colore per Tipo Operazione e Nomi Visuali
+        let typeBadgeBorder = '#00ff00';
+        let glowRGB = '0, 255, 0'; // Verde di default per ARRIVI
+        let displayName = l.type;
+        let isSingleLocation = false;
+
+        if (l.type.includes('TRASFERIMENTO') && !l.type.includes('CUCINA')) {
+            typeBadgeBorder = '#00ccff'; // Azzurro per trasferimenti normali
+            glowRGB = '0, 204, 255';
+        } else if (l.type.includes('TRASFERIMENTO') && l.type.includes('CUCINA')) {
+            typeBadgeBorder = '#ff9900'; // Arancio per trasferimenti cucina
+            glowRGB = '255, 153, 0';
+        } else if (l.type.includes('CUCINA')) {
+            typeBadgeBorder = '#ff4444'; // Rosso per prelievi cucina
+            glowRGB = '255, 68, 68';
+            if (l.type === 'CARICO_CUCINA') displayName = 'CARICHI CUCINA';
+            isSingleLocation = true; // Consumo avviene solo tirando fuori dal magD originario
+        } else if (l.type.includes('CORREZIONE')) {
+            typeBadgeBorder = '#ff00ff'; // Fucsia per correzioni admin
+            glowRGB = '255, 0, 255';
+            isSingleLocation = true; // Correzione avviene in un solo magD
+        }
+
+        // Costruzione dinamica del blocco Percorso (Path)
+        let pathHTML = '';
+        if (isSingleLocation) {
+            pathHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0px; height:100%;">
+                    <div style="font-size:10px; color:#888; text-transform:uppercase;">Magazzino</div>
+                    <div style="font-size:12px; color:#ddd; font-weight:bold; margin-top:2px;">${l.from_wh}</div>
+                </div>
+            `;
+        } else {
+            pathHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:0px;">
+                    <div style="font-size:10px; color:#888; text-transform:uppercase;">Da: <span style="color:#ddd; font-weight:bold;">${l.from_wh}</span></div>
+                    <i class="bi bi-arrow-down-short" style="color:var(--accent); font-size:16px; line-height:0.8;"></i>
+                    <div style="font-size:10px; color:#888; text-transform:uppercase;">A: <span style="color:#ddd; font-weight:bold;">${l.to_wh}</span></div>
+                </div>
+            `;
+        }
+
+        tbody.innerHTML += `
+            <div class="movement-card" style="box-sizing:border-box; width:calc(100% - 10px); max-width:600px; margin:0 auto; background-color:#141414; background-image: radial-gradient(ellipse at top center, rgba(${glowRGB}, 0.25) 0%, transparent 70%); border:1px solid ${typeBadgeBorder}55; border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:4px; box-shadow:0 0 12px rgba(${glowRGB}, 0.15), inset 0 2px 0 ${typeBadgeBorder}; position:relative; overflow:hidden;">
+                <!-- ROW 1: Date and Type perfectly centered -->
+                <div style="display:flex; justify-content:center; align-items:center; border-bottom:1px solid #222; padding-bottom:6px; position:relative;">
+                    <div style="position:absolute; left:0; font-size:11px; color:#aaa;"><i class="bi bi-clock"></i> ${dt}</div>
+                    <div style="font-size:10px; font-weight:bold; letter-spacing:1px; padding:2px 6px; border-radius:4px; border:1px solid ${typeBadgeBorder}; text-transform:uppercase; background:rgba(${glowRGB}, 0.1); color:${typeBadgeBorder}; box-shadow:0 0 8px rgba(${glowRGB},0.3);">${displayName}</div>
+                </div>
+                
+                <!-- ROW 2: Product Name Centered + User Right Aligned -->
+                <div style="display:flex; justify-content:center; align-items:baseline; gap:8px; margin-top:4px; flex-wrap:wrap;">
+                    <div style="font-size:18px; font-weight:bold; color:white; font-family:'Teko', sans-serif; letter-spacing:1px; line-height:1.1; text-align:center;">
+                        ${l.product_name}
+                    </div>
+                    <div style="font-size:10px; color:#888;">
+                        <i class="bi bi-person-fill"></i> ${l.user_name}
+                    </div>
+                </div>
+                
+                <!-- ROW 3: Qty & Path (Centered/Closer) -->
+                <div style="display:flex; justify-content:space-evenly; align-items:center; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; margin-top:4px; border:1px solid #222;">
+                    <!-- Qty Left-Center -->
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                        <div style="font-size:10px; color:#888; text-transform:uppercase; margin-bottom:2px;">Quantità</div>
+                        <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                            ${renderQtyBadges(parseInt(tot), pInfo)}
+                        </div>
+                        <div style="font-size:14px; color:var(--accent); font-weight:bold; margin-top:2px;">${tot} pz</div>
+                    </div>
+                    
+                    <!-- Divider line -->
+                    <div style="width:1px; height:40px; background:#333;"></div>
+                    
+                    <!-- Path Right-Center -->
+                    ${pathHTML}
+                </div>
+            </div>
+        `;
+    });
+}
+
+window.promptClearMovements = async function () {
+    const { isConfirmed } = await Swal.fire({
+        title: 'Sei assolutamente sicuro?',
+        text: "Questa azione svuoterà l'intero registro dei movimenti. I dati non potranno essere recuperati!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#aa0000',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sì, svuota tutto!',
+        cancelButtonText: 'Annulla'
+    });
+
+    if (isConfirmed) {
+        showLoader(true);
+        try {
+            // Elimina tutte le righe filtrando per id non nullo (che corrisponde a tutte le tabelle valide)
+            const { error } = await dbClient.from('movements').delete().not('id', 'is', null);
+            if (error) throw error;
+
+            await loadMovementsLog();
+            showLoader(false);
+            Swal.fire({
+                title: 'Registro Svuotato!',
+                text: 'Il database è stato pulito correttamente.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (err) {
+            showLoader(false);
+            Swal.fire('Errore', 'Impossibile svuotare il registro: ' + err.message, 'error');
+        }
+    }
+}
+
+window.filterMovements = function () {
+    const term = document.getElementById('mov-log-search').value.toLowerCase();
+    const cards = document.querySelectorAll('#mov-log-body .movement-card');
+
+    cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        if (text.includes(term)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
     });
 }
 
@@ -890,9 +1017,9 @@ async function loadReports() {
     // Add "Filtro applicato" badge if not viewing all
     if (supp !== 'ALL') {
         div.innerHTML += `
-                <div style="background: rgba(255, 215, 0, 0.1); border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; margin-bottom: 20px; text-align: center; color: var(--accent); font-size: 14px; font-weight: bold; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-                    <i class="bi bi-funnel-fill"></i> FILTRO APPLICATO: <span style="color: white; font-size:16px;">${supp.toUpperCase()}</span>
-                </div>`;
+            <div style="background: rgba(255, 215, 0, 0.1); border: 1px dashed var(--accent); border-radius: 8px; padding: 10px; margin-bottom: 20px; text-align: center; color: var(--accent); font-size: 14px; font-weight: bold; letter-spacing: 1px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                <i class="bi bi-funnel-fill"></i> FILTRO APPLICATO: <span style="color: white; font-size:16px;">${supp.toUpperCase()}</span>
+            </div>`;
     }
 
     if (filtered.length === 0) {
@@ -902,7 +1029,7 @@ async function loadReports() {
 
     filtered.forEach((r, idx) => {
         div.innerHTML += `
-                <div class="prod-btn" style="border-left: 4px solid var(--accent); border-radius: 8px; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px;" onclick="openReportDetail(${ALL_REPORTS.indexOf(r)})">
+            <div class="prod-btn" style="border-left: 4px solid var(--accent); border-radius: 8px; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px;" onclick="openReportDetail(${ALL_REPORTS.indexOf(r)})">
                     <div style="background:rgba(255, 215, 0, 0.1); padding:8px 10px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
                         <i class="bi bi-file-earmark-bar-graph" style="color:var(--accent); font-size:22px;"></i>
                     </div>
@@ -919,7 +1046,7 @@ async function loadReports() {
                     <div style="width:24px; display:flex; justify-content:flex-end;">
                         <i class="bi bi-chevron-right" style="color:#555; font-size:20px;"></i>
                     </div>
-                </div>`;
+                </div > `;
     });
 }
 
@@ -934,7 +1061,7 @@ function openReportDetail(idx) {
         grouped[it.supp].push(it);
     });
 
-    // let modInfo = r.mod ? `<div style="font-size:12px; color:#555; text-align:center; padding-bottom:10px;">Ultima mod: ${r.mod} (da ${r.user})</div>` : '';
+    // let modInfo = r.mod ? `<div style="font-size:12px; color:#555; text-align:center; padding-bottom:10px;">Ultima mod: ${ r.mod } (da ${ r.user })</div>` : '';
     // Rimosso volutamente
     let h = `<div style="text-align:center"><h2 class="hide-print" style="color:var(--accent); font-family:'Teko'; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom:5px;">REPORT ${r.date}</h2></div>`;
 
@@ -965,33 +1092,33 @@ function openReportDetail(idx) {
 
             let sumTot = stockTot + it.qty;
             let sumDisplay = `<div style="display:flex; align-items:center; justify-content:center; gap:12px">
-                                        <div class="qty-box" style="margin:0">${renderQtyBadges(sumTot, p)}</div>
-                                        <b style="font-size:16px; font-family:'Teko'; letter-spacing:1px; background:rgba(0,0,0,0.1); padding:2px 10px; border-radius:10px">${sumTot} pz</b>
-                                      </div>`;
+            <div class="qty-box" style="margin:0">${renderQtyBadges(sumTot, p)}</div>
+            <b style="font-size:16px; font-family:'Teko'; letter-spacing:1px; background:rgba(0,0,0,0.1); padding:2px 10px; border-radius:10px">${sumTot} pz</b>
+        </div>`;
 
             h += `<table style="width:100%; border-collapse:collapse; border:1px solid #000; margin:0; ${isLast ? '' : 'border-bottom:none'}">
-                        <tr style="background:${theme.prod}">
-                            <td style="padding:4px; font-size:13px; font-weight:bold; border-bottom:1px solid #000; border-right:1px solid #000; text-align:center; width:30%; vertical-align:middle;">${p.Nome}${userBadge}</td>
-                            <td style="padding:4px; text-align:center; font-size:12px; border-bottom:1px solid #000; border-right:1px dotted #888; width:35%;">
-                               <span style="color:#555; font-size:9px; display:block; line-height:1; margin-bottom:4px; text-transform:uppercase; font-weight:bold">Cucina</span>
-                               <div class="qty-box" style="margin:0 0 4px 0; justify-content:center; gap:2px">${renderQtyBadges(it.qty, p)}</div>
-                               <b style="font-size:14px; background:rgba(0,0,0,0.1); padding:2px 8px; border-radius:10px">${it.qty} pz</b>
-                            </td>
-                            <td style="padding:4px; text-align:center; font-size:12px; border-bottom:1px solid #000; width:35%; background:rgba(0,0,0,0.03)">
-                               <span style="color:#2277bb; font-size:9px; display:block; line-height:1; margin-bottom:4px; text-transform:uppercase; font-weight:bold">Magazzino</span>
-                               <div class="qty-box" style="margin:0 0 4px 0; justify-content:center; gap:2px">${renderQtyBadges(stockTot, p)}</div>
-                               <b style="color:#2277bb; font-size:14px; background:rgba(34,119,187,0.1); padding:2px 8px; border-radius:10px">${stockTot} pz</b>
-                            </td>
-                        </tr>
-                        <tr style="background:${theme.break}">
-                            <td colspan="3" style="padding:6px; text-align:center; font-size:12px;">
-                                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;">
-                                   <span style="font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px">Totale Confronto</span>
-                                   ${sumDisplay}
-                                </div>
-                            </td>
-                        </tr>
-                      </table>`;
+            <tr style="background:${theme.prod}">
+                <td style="padding:4px; font-size:13px; font-weight:bold; border-bottom:1px solid #000; border-right:1px solid #000; text-align:center; width:30%; vertical-align:middle;">${p.Nome}${userBadge}</td>
+                <td style="padding:4px; text-align:center; font-size:12px; border-bottom:1px solid #000; border-right:1px dotted #888; width:35%;">
+                    <span style="color:#555; font-size:9px; display:block; line-height:1; margin-bottom:4px; text-transform:uppercase; font-weight:bold">Cucina</span>
+                    <div class="qty-box" style="margin:0 0 4px 0; justify-content:center; gap:2px">${renderQtyBadges(it.qty, p)}</div>
+                    <b style="font-size:14px; background:rgba(0,0,0,0.1); padding:2px 8px; border-radius:10px">${it.qty} pz</b>
+                </td>
+                <td style="padding:4px; text-align:center; font-size:12px; border-bottom:1px solid #000; width:35%; background:rgba(0,0,0,0.03)">
+                    <span style="color:#2277bb; font-size:9px; display:block; line-height:1; margin-bottom:4px; text-transform:uppercase; font-weight:bold">Magazzino</span>
+                    <div class="qty-box" style="margin:0 0 4px 0; justify-content:center; gap:2px">${renderQtyBadges(stockTot, p)}</div>
+                    <b style="color:#2277bb; font-size:14px; background:rgba(34,119,187,0.1); padding:2px 8px; border-radius:10px">${stockTot} pz</b>
+                </td>
+            </tr>
+            <tr style="background:${theme.break}">
+                <td colspan="3" style="padding:6px; text-align:center; font-size:12px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;">
+                        <span style="font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px">Totale Confronto</span>
+                        ${sumDisplay}
+                    </div>
+                </td>
+            </tr>
+        </table>`;
         });
         h += `</div>`;
     });
@@ -1005,7 +1132,7 @@ function printReportDiv() {
     const content = document.getElementById('report-print-content').innerHTML;
 
     // Generate full HTML for printing (Monochromatic professional style)
-    const html = `<html><head><title>Report ${r.date}</title>
+    const html = `< html ><head><title>Report ${r.date}</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
             <style>
                 @page { size: auto; margin: 0; }
@@ -1039,7 +1166,7 @@ function printReportDiv() {
             </style></head><body>
             <h1>REPORT GIORNALIERO: ${r.date}</h1>
             ${content}
-            </body></html>`;
+            </body></html > `;
 
     let frame = document.getElementById('print-frame');
     if (!frame) {
@@ -1067,7 +1194,7 @@ function renderAdminProds() {
     const container = document.createElement('div'); container.className = 'prod-btn-list';
     DB.products.filter(p => p.Nome.toLowerCase().includes(q)).forEach(p => {
         container.innerHTML += `
-                <div class="prod-btn" onclick="editProduct('${p.ID_Prodotto}')">
+        <div class="prod-btn" onclick="editProduct('${p.ID_Prodotto}')">
                     <div style="display:flex; flex-direction:column">
                         <b>${p.Nome}</b>
                         <small style="color:#666; font-size:11px">${p.Categoria || 'Senza Categoria'}</small>
@@ -1087,7 +1214,7 @@ function editProduct(pid) {
     }).join('');
 
     document.getElementById('edit-form-content').innerHTML = `
-            <div style="max-height:60vh; overflow-y:auto; padding-right:10px">
+        <div style="max-height:60vh; overflow-y:auto; padding-right:10px">
                 <div class="modal-form-group"><label>NOME PRODOTTO</label><input id="edt-name" class="dark-input" value="${p.Nome}" autocomplete="off"></div>
                 <div class="modal-form-group"><label>CATEGORIA</label><input id="edt-cat" class="dark-input" value="${p.Categoria}" autocomplete="off"></div>
                 <div class="modal-form-group"><label>FORNITORE</label><input id="edt-supp" class="dark-input" value="${p.Fornitore}" autocomplete="off"></div>
@@ -1101,7 +1228,7 @@ function editProduct(pid) {
                     <div style="font-size:11px; color:#888; font-style:italic; text-transform:none; margin-bottom:10px; line-height:1.2">Seleziona in quali magazzini questo prodotto deve apparire fisso sulla Dashboard (anche a quantità zero).</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">${whCheckboxes}</div>
                 </div>
-            </div>`;
+            </div > `;
     window.editingPid = pid;
     document.getElementById('modal-edit-prod').style.display = 'flex';
 }

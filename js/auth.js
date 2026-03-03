@@ -41,7 +41,7 @@ function initUserSession(roleData) {
     USER = { id: roleData.id, username: roleData.username, role: roleData.role };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
-    document.getElementById('user-display').innerText = USER.username.toUpperCase();
+    document.getElementById('user-display').innerHTML = USER.username.toUpperCase() + ' <i class="bi bi-power" style="margin-left: 5px; font-weight: bold;"></i>';
 
     // RESTORE ADMIN UI LOGIC
     if (USER.role === 'Admin') {
