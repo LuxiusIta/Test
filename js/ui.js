@@ -12,7 +12,7 @@ function openPagePicker() {
         pages.push({ id: 'admin-reports', name: 'GESTIONE REPORT', icon: 'bi-file-earmark-bar-graph' });
         pages.push({ id: 'admin-notices', name: 'GESTIONE AVVISI', icon: 'bi-megaphone' });
         pages.push({ id: 'admin-users', name: 'GESTIONE UTENTI', icon: 'bi-people' });
-        pages.push({ id: 'admin-movements-log', name: 'GESTIONE LOGS ATTIVITÀ', icon: 'bi-journal-text' });
+        pages.push({ id: 'admin-movements-log', name: 'GESTIONE MOVIMENTI', icon: 'bi-journal-text' });
     }
 
     let html = '<div style="display:flex; flex-direction:column; gap:10px; padding:10px;">';
@@ -767,4 +767,5 @@ window.deleteNotice = deleteNotice;
 window.checkAndShowNotices = checkAndShowNotices;
 window.applyNoticeColor = applyNoticeColor;
 window.updateNoticeToolbar = updateNoticeToolbar;
+
 
