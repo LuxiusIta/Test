@@ -1,342 +1,765 @@
-async function attemptLogin() {
-    const u = document.getElementById('username').value;
-    const p = document.getElementById('password').value;
-    if (!u || !p) return Swal.fire('Errore', 'Inserisci dati', 'error');
+<!DOCTYPE html>
+<html>
 
-    showLoader(true);
-    try {
-        const fakeEmail = u.toLowerCase() + '@cantiere.local';
-        const { data, error } = await dbClient.auth.signInWithPassword({
-            email: fakeEmail,
-            password: p
-        });
+<head>
+    <base target="_top">
+    <title>Gestionale Cantiere</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Teko:wght@300;500;700&family=Roboto:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
-        if (error) throw error;
+    <!-- ONESIGNAL PUSH NOTIFICATIONS -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
-        // Fetch user role
-        const { data: roleData, error: roleError } = await dbClient.from('user_roles').select('*').eq('id', data.user.id).single();
-        if (roleError) throw roleError;
+    <!-- PWA & MOBILE ICONS -->
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-title" content="Cantiere">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://i.imgur.com/aBWW2ry.png">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/aBWW2ry.png">
 
-        showLoader(false);
-        initUserSession(roleData);
+    <!-- FIX FULLSCREEN PWA ANDROID/IOS -->
+    <link rel="manifest"
+        href='data:application/manifest+json,{"name":"Cantiere","short_name":"Cantiere","start_url":"/Test/","scope":"/Test/","display":"standalone","background_color":"#0a0a0a","theme_color":"#000000","icons":[{"src":"https://i.imgur.com/aBWW2ry.png","sizes":"192x192","type":"image/png"}]}'>
 
-    } catch (err) {
-        showLoader(false);
-        const msg = err.message || '';
-        let msgIT = msg;
-        if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid email or password')) {
-            msgIT = 'Identificativo o password errati. Riprova.';
-        } else if (msg.toLowerCase().includes('email not confirmed')) {
-            msgIT = 'Email non confermata. Contatta l\'amministratore.';
-        } else if (msg.toLowerCase().includes('too many requests')) {
-            msgIT = 'Troppi tentativi. Attendi qualche minuto e riprova.';
-        } else if (msg.toLowerCase().includes('user not found')) {
-            msgIT = 'Utente non trovato.';
+</head>
+
+<body>
+
+    <!-- LOADER (Inlined styles in head to prevent FOUC) -->
+    <style>
+        #loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 5000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        Swal.fire('Accesso Negato', msgIT, 'error');
-    }
-}
 
-function initUserSession(roleData) {
-    USER = { id: roleData.id, username: roleData.username, role: roleData.role };
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app-screen').style.display = 'block';
-    document.getElementById('user-display').innerHTML = USER.username.toUpperCase() + ' <i class="bi bi-power" style="margin-left: 5px; font-weight: bold;"></i>';
-
-    // RESTORE ADMIN UI LOGIC
-    if (USER.role === 'Admin') {
-        document.getElementById('admin-menu').classList.remove('hidden');
-        document.getElementById('admin-filters').classList.remove('hidden');
-        document.querySelectorAll('.admin-only').forEach(e => e.classList.remove('hidden'));
-        document.querySelectorAll('.user-only').forEach(e => e.classList.add('hidden'));
-        document.getElementById('user-display').style.color = 'var(--accent)';
-        document.getElementById('menu-title').innerHTML = 'MENU ADMIN';
-        checkNotifications();
-    } else {
-        document.getElementById('admin-menu').classList.add('hidden');
-        document.getElementById('admin-filters').classList.add('hidden');
-        document.querySelectorAll('.admin-only').forEach(e => e.classList.add('hidden'));
-        document.querySelectorAll('.user-only').forEach(e => e.classList.remove('hidden'));
-        document.getElementById('menu-title').innerHTML = 'MENU OFFICINA';
-    }
-
-    // Setup Mobile Interactivity (For both Admin and User)
-    const pageTitle = document.getElementById('header-page-title');
-    const userBadge = document.querySelector('.user-badge');
-
-    if (window.innerWidth <= 768) {
-        if (pageTitle) {
-            pageTitle.style.cursor = 'pointer';
-            pageTitle.onclick = () => { if (typeof openPagePicker === 'function') openPagePicker(); };
+        .loader-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        if (userBadge) {
-            userBadge.style.cursor = 'pointer';
-            userBadge.onclick = () => { if (typeof openUserProfile === 'function') openUserProfile(); };
+
+        .loader-gear {
+            font-size: 100px;
+            color: #222;
+            animation: spin 4s linear infinite;
+            position: absolute;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.1));
         }
-    } else {
-        // Desktop behavior: cursor pointer for profile
-        if (pageTitle) {
-            pageTitle.style.cursor = 'default';
-            pageTitle.onclick = null;
+
+        .loader-wrench {
+            font-size: 50px;
+            color: #FFD700;
+            position: absolute;
+            animation: rock 2s ease-in-out infinite;
+            transform-origin: center;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
         }
-        if (userBadge) {
-            userBadge.style.cursor = 'pointer';
-            userBadge.onclick = () => { if (typeof openUserProfile === 'function') openUserProfile(); };
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
         }
-    }
 
-    setupRealtime();
-    nav('dashboard');
-    // OneSignal Push Notifications Init
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(function (OneSignal) {
-        OneSignal.init({
-            appId: "f30c0e52-8b70-44e1-8d2b-7a263e272bc8",
-            safari_web_id: "",
-            notifyButton: { enable: false },
-            allowLocalhostAsSecureOrigin: true,
-            allow_message_focus: true,
-            // PATH ASSOLUTO FONDAMENTALE PER GITHUB PAGES SOTTOCARTELLE
-            // Se il service worker non viene trovato dal browser, l'iscrizione fallisce e rimane a (0) 
-            path: "https://luxiusita.github.io/Test/",
-            serviceWorkerParam: { scope: "/Test/" },
-            serviceWorkerPath: "OneSignalSDKWorker.js"
-        });
+        @keyframes rock {
+            0% {
+                transform: rotate(-20deg);
+            }
 
-        if (USER && USER.username) {
-            OneSignal.login(USER.username);
+            50% {
+                transform: rotate(20deg);
+            }
+
+            100% {
+                transform: rotate(-20deg);
+            }
         }
-    });
+    </style>
+    <div id="loader-overlay">
+        <div class="loader-container">
+            <i class="bi bi-gear-fill loader-gear"></i>
+            <i class="bi bi-wrench-adjustable loader-wrench"></i>
+        </div>
+        <div
+            style="margin-top:30px; font-family:'Teko'; font-size:36px; color:white; letter-spacing:4px; text-shadow: 0 0 20px rgba(255,215,0,0.3)">
+            CARICAMENTO...
+        </div>
+    </div>
 
-    // Mostra avvisi attivi dopo il login
-    setTimeout(() => checkAndShowNotices(), 800);
-}
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="active-screen bg-steel-login">
+        <div class="vignette"></div>
+        <div class="login-container">
+            <div class="brand-stripe"></div>
+            <img src="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj"
+                class="logo-circle">
+            <h1 class="brand-title">
+                <span style="white-space: nowrap;"><span style="font-size: 0.6em; vertical-align: middle;">🚧🚧</span>
+                    CANTIERE <span style="font-size: 0.6em; vertical-align: middle;">🚧🚧</span></span>
+                <span style="color:var(--accent); white-space: nowrap;"><span
+                        style="font-size: 0.6em; vertical-align: middle;">🔨</span> HAMBIRRERIA <span
+                        style="font-size: 0.6em; vertical-align: middle;">🔨</span></span>
+            </h1>
 
-// --- USER PROFILE & LOGOUT ---
-async function openUserProfile() {
-    if (!USER) return;
+            <form onsubmit="event.preventDefault(); attemptLogin();" style="width: 100%;">
+                <div class="input-wrap">
+                    <i class="bi bi-person-fill"></i>
+                    <input type="text" id="username" placeholder="IDENTIFICATIVO" autocomplete="username">
+                </div>
+                <div class="input-wrap">
+                    <i class="bi bi-key-fill"></i>
+                    <input type="password" id="password" placeholder="PASSWORD" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-neon w-100 mt-10" style="margin-top: 20px;">ENTRA NEL SISTEMA</button>
+            </form>
+            <button class="btn-install" onclick="showInstallHelp()">
+                <i class="bi bi-apple"></i>
+                INSTALLA APP
+                <i class="bi bi-android2"></i>
+            </button>
+        </div>
+    </div>
 
-    // Controlla lo stato attuale delle notifiche OneSignal
-    let isSubscribed = false;
-    if (window.OneSignal) {
-        isSubscribed = window.OneSignal.User.PushSubscription.optedIn;
-    }
+    <!-- APP SCREEN -->
+    <div id="app-screen" style="display:none;" class="bg-app-main">
 
-    const toggleHtml = `
-        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <i class="bi bi-bell-fill" style="color:var(--accent); font-size:24px;"></i>
-                <div style="text-align:left;">
-                    <div style="font-family:'Teko'; font-size:20px; color:#fff; letter-spacing:1px; line-height:1;">NOTIFICHE PUSH</div>
-                    <div style="font-size:12px; color:#888;">Avvisi e Messaggi Chat</div>
+        <!-- TOP BAR -->
+        <div class="top-header" style="justify-content:flex-start">
+            <div class="header-chain"></div>
+            <i class="bi bi-gear-fill header-gear gear-left" style="display:none;"></i>
+            <i class="bi bi-gear-fill header-gear gear-right" style="display:none;"></i>
+
+            <img src="https://i.imgur.com/rgc71OX.png" class="mobile-logo" style="display:none;" alt="Logo">
+
+            <div class="mobile-header-row">
+                <div class="header-title" id="header-page-title" onclick="openPagePicker()">MAGAZZINO</div>
+                <div class="user-badge" id="user-display" onclick="openUserProfile()"></div>
+            </div>
+
+            <div class="header-controls">
+                <!-- Add Operations Quick Action -->
+                <button class="icon-btn" onclick="nav('operations')"
+                    style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);"
+                    title="Nuova Operazione">
+                    <i class="bi bi-cart-fill"></i>
+                </button>
+
+                <!-- Add Chat Button -->
+                <button class="icon-btn" onclick="toggleChat()"
+                    style="position:relative; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);">
+                    <i class="bi bi-chat-text-fill"></i>
+                    <span id="chat-badge"
+                        style="display:none; position:absolute; top:0px; right:0px; background:var(--accent); color:black; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:8px; line-height:16px; text-align:center; padding:0 4px; text-shadow:none;">0</span>
+                </button>
+
+                <!-- Add Daily List Quick Action for Users -->
+                <button class="icon-btn user-only hidden" onclick="nav('dailylist')"
+                    style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);"
+                    title="Vai al Giornaliero">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+
+                <!-- Notifications Button -->
+                <button id="btn-notifications" class="admin-only hidden"
+                    style="background:none; border:none; color:#c0c0c0; font-size:22px; cursor:pointer; position:relative; margin:0; padding:5px; text-shadow: 0 0 8px rgba(200,200,200,0.5);"
+                    onclick="openNotifications()">
+                    <i class="bi bi-bell-fill"></i>
+                    <span id="notif-badge"
+                        style="position:absolute; top:0; right:0; background:var(--danger); color:white; font-size:10px; border-radius:50%; padding:2px 5px; font-family:'Roboto'; display:none; text-shadow:none;">0</span>
+                </button>
+
+                <!-- SEGNALA INCONGRUENZA - icona rossa per tutti i ruoli -->
+                <button id="btn-segnala" class="icon-btn" onclick="openMismatchModal()"
+                    style="background:none; border:none; color:#FF2222; font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,34,34,0.7);"
+                    title="Segnala Incongruenza">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </button>
+            </div>
+
+            <button class="icon-btn header-menu-btn" onclick="toggleMenu()"><i class="bi bi-list"></i></button>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div id="sidebar-overlay" onclick="toggleMenu()"></div>
+        <div id="sidebar">
+            <div class="sidebar-handle" onclick="toggleMenu()">
+                <i class="bi bi-list" style="font-size: 13px;"></i>
+                <i class="bi bi-chevron-right" style="font-size: 9px; margin-left: -4px;"></i>
+            </div>
+            <div class="sidebar-top"
+                style="display:flex; flex-wrap:nowrap; align-items:center; gap:10px; padding-top:8px;">
+                <img src="https://yt3.googleusercontent.com/ytc/AIdro_nC2KYqN62QVeGk8Fj8CAnW8dEJ4FNTgqqVC8dgSFaxgQ=s160-c-k-c0x00ffffff-no-rj"
+                    style="width:36px; height:36px; border-radius:6px; object-fit:cover; flex-shrink:0;">
+                <h2 id="menu-title"
+                    style="margin:0; color:var(--accent); font-family:'Teko'; font-size:30px; line-height:1; text-align:left; white-space:nowrap;">
+                    MENU ADMIN</h2>
+            </div>
+            <div class="nav-links">
+                <a onclick="nav('dashboard')" id="nav-dashboard"><i class="bi bi-box-seam"></i> Magazzino</a>
+                <a onclick="nav('operations')" id="nav-operations"><i class="bi bi-arrow-left-right"></i> Operazioni</a>
+                <a onclick="nav('dailylist')" id="nav-dailylist"><i class="bi bi-clipboard-check"></i> Lista
+                    Giornaliera&nbsp;Cucina</a>
+
+                <!-- ADMIN SECTION -->
+                <div class="admin-section hidden" id="admin-menu"
+                    style="border-top:1px solid #333; margin-top:10px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.1));">
+                    <div
+                        style="margin: 6px 15px 10px 15px; padding: 3px 15px; color:#000; font-size:22px; font-weight:bold; background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 15px, #d4af37 15px, #d4af37 30px); text-align:center; letter-spacing:1px; font-family:'Teko'; border:2px solid #000; border-radius: 8px; text-shadow: 1px 1px 0px rgba(255,255,255,0.3); box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.5);">
+                        <i class="bi bi-cone-striped" style="margin-right:8px;"></i>ADMIN<i class="bi bi-cone-striped"
+                            style="margin-left:8px;"></i>
+                    </div>
+
+                    <a onclick="nav('admin-warehouses')" id="nav-admin-warehouses"><i class="bi bi-box"></i> Gestione
+                        Magazzini</a>
+                    <a onclick="nav('admin-products')" id="nav-admin-products"><i class="bi bi-boxes"></i> Gestione
+                        Prodotti</a>
+                    <a onclick="nav('admin-movements-log')" id="nav-admin-movements-log"><i class="bi bi-table"></i>
+                        Registro Movimenti</a>
+                    <a onclick="nav('admin-users')" id="nav-admin-users"><i class="bi bi-people-fill"></i> Gestione
+                        Utenti</a>
+                    <a onclick="nav('admin-reports')" id="nav-admin-reports"><i
+                            class="bi bi-file-earmark-bar-graph"></i> Reports Giornalieri</a>
+                    <a onclick="nav('admin-notices')" id="nav-admin-notices"><i class="bi bi-megaphone-fill"></i>
+                        Gestione Avvisi</a>
                 </div>
             </div>
-            
-            <label class="switch" style="position:relative; display:inline-block; width:60px; height:34px;">
-                <input type="checkbox" id="push-toggle" ${isSubscribed ? 'checked' : ''} onchange="togglePushNotifications(this.checked)" style="opacity:0; width:0; height:0;">
-                <span class="slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:34px;"></span>
-            </label>
-        </div>
-        
-        <style>
-            .switch input:checked + .slider { background-color: var(--accent); }
-            .switch input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
-            .switch input:checked + .slider:before { transform: translateX(26px); }
-            .slider:before { position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background-color:black; transition:.4s; border-radius:50%; }
-        </style>
-    `;
-
-    Swal.fire({
-        title: `<span style="font-family:'Teko'; font-size:28px; letter-spacing:1px;">PROFILO UTENTE</span>`,
-        html: `
-            <div style="margin-bottom:20px;">
-                <div style="font-size:24px; font-weight:bold; color:#fff;">${USER.username.toUpperCase()}</div>
-                <div style="font-size:14px; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-weight:bold;">RUOLO: ${USER.role}</div>
+            <div class="sidebar-footer">
+                <button class="btn-logout" onclick="logout()">DISCONNESSIONE</button>
             </div>
-            ${toggleHtml}
-        `,
-        background: '#1a1a1a',
-        color: '#ccc',
-        showCancelButton: true,
-        showConfirmButton: true,
-        confirmButtonColor: 'var(--danger)',
-        cancelButtonColor: '#333',
-        confirmButtonText: '<i class="bi bi-box-arrow-right"></i> DISCONNETTI',
-        cancelButtonText: 'CHIUDI',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            logoutConfirm();
-        }
-    });
-}
+        </div> <!-- closes sidebar -->
 
-async function togglePushNotifications(enable) {
-    if (!window.OneSignal) return;
+        <!-- MAIN CONTENT WRAPPER -->
+        <div id="main-content">
+            <div class="desktop-wrapper">
 
-    try {
-        if (enable) {
-            // Su iOS PWA (16.4+) la chiamata deve essere diretta e asincrona legata al click
-            // Se la mettiamo dentro "OneSignalDeferred" il browser la scarta.
-            await window.OneSignal.Notifications.requestPermission();
+                <!-- DASHBOARD -->
+                <div id="page-dashboard" class="page">
+                    <div class="cantiere-filters">
+                        <div id="filters-collapse-area" class="collapsed">
+                            <div class="search-wrapper"
+                                style="margin-bottom:6px; display:flex; justify-content:center; gap:6px;">
+                                <div style="position:relative; width:100%; max-width:260px;">
+                                    <i class="bi bi-search"
+                                        style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--accent); pointer-events:none;"></i>
+                                    <input type="text" id="dash-search" class="dark-input"
+                                        placeholder="Cerca prodotto..." onkeyup="renderDashboard()"
+                                        style="height:32px; padding:4px 10px 4px 30px; font-size:14px; text-align:center; width:100%; box-sizing:border-box;">
+                                </div>
+                                <!-- Admin solo: filtro fornitori vicino alla barra di ricerca -->
+                                <div class="admin-only hidden" style="width:100%; max-width:140px;">
+                                    <select id="dash-supp-filter" class="dark-select" onchange="renderDashboard()"
+                                        style="height:32px; padding:2px; font-size:10px; width:100%;">
+                                        <option value="ALL">FORNITORI...</option>
+                                    </select>
+                                </div>
+                            </div>
 
-            if (USER && USER.username) {
-                window.OneSignal.login(USER.username);
-            }
-        } else {
-            window.OneSignal.User.PushSubscription.optOut();
-        }
-    } catch (e) {
-        console.error("Errore iOS Push:", e);
-    }
-}
+                            <div style="display:flex; gap:8px; margin-bottom:6px; justify-content:center;">
+                                <select id="dash-wh-filter" class="dark-select" onchange="renderDashboard()"
+                                    style="height:32px; padding:2px; font-size:12px; width:100%; max-width:170px;">
+                                    <option value="ALL">TUTTI I MAGAZZINI</option>
+                                </select>
+                                <select id="dash-cat-filter" class="dark-select" onchange="renderDashboard()"
+                                    style="height:32px; padding:2px; font-size:12px; width:100%; max-width:170px;">
+                                    <option value="ALL">TUTTE LE CATEGORIE</option>
+                                </select>
+                            </div>
 
-async function logoutConfirm() {
-    // Il logout effettivo rimane identico a prima
-    const { isConfirmed } = await Swal.fire({
-        title: 'DISCONNESSIONE',
-        text: "Vuoi uscire dal sistema?",
-        icon: 'warning',
-        showCancelButton: true,
-        background: '#1a1a1a',
-        color: '#fff',
-        confirmButtonColor: '#FFD700',
-        cancelButtonColor: '#444',
-        confirmButtonText: '<span style="color:black; font-weight:bold;">SÌ, ESCI</span>',
-        cancelButtonText: 'ANNULLA'
-    });
+                            <div id="admin-filters" class="hidden" style="border-top:1px solid #333; padding-top:8px">
+                                <div style="display:flex; justify-content:center;">
+                                    <button class="btn-neon" onclick="printStock()"
+                                        style="width:auto; font-size:10px !important; background:#333; color:white; border:1px solid var(--accent); padding:4px 14px !important; white-space:nowrap;"><i
+                                            class="bi bi-printer"></i> STAMPA GIACENZA</button>
+                                </div>
+                            </div>
 
-    if (isConfirmed) {
-        logout();
-    }
-}
-async function checkActiveSession() {
-    const { data: { session } } = await dbClient.auth.getSession();
-    if (session) {
-        showLoader(true);
-        const { data: roleData, error } = await dbClient.from('user_roles').select('*').eq('id', session.user.id).single();
-        showLoader(false);
-        if (roleData) {
-            initUserSession(roleData);
-        } else {
-            logout();
-        }
-    } else {
-        showLoader(false);
-    }
-}
+                        </div> <!-- chiude filters-collapse-area -->
+                        <div class="filters-toggle-btn" onclick="toggleDashboardFilters()">
+                            <div id="filters-preview" class="filters-preview"></div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <i class="bi bi-funnel-fill" style="font-size:14px;"></i>
+                                <i class="bi bi-chevron-down" id="filters-toggle-icon"></i>
+                            </div>
+                        </div>
+                    </div> <!-- chiude cantiere-filters -->
 
-// Check session on startup
-document.addEventListener('DOMContentLoaded', checkActiveSession);
+                    <div id="dashboard-grid" class="grid-container"></div>
+                </div> <!-- chiude page-dashboard -->
 
-async function logout() {
-    showLoader(true);
-    await dbClient.auth.signOut();
-    showLoader(false);
 
-    USER = null; DAILY_DATA = {}; OP_CART = [];
-    if (inventorySubscription) { dbClient.removeChannel(inventorySubscription); inventorySubscription = null; }
 
-    // Forze clear Operations Cart UI
-    const cartContainer = document.getElementById('op-cart-container');
-    const cartOverlay = document.getElementById('cart-overlay');
-    if (cartContainer) {
-        cartContainer.classList.remove('active');
-        cartContainer.classList.add('global-hidden'); // Nasconde completamente dalla vista Login
-    }
-    if (cartOverlay) cartOverlay.classList.remove('active');
-    document.body.classList.remove('no-scroll');
-    if (typeof updateCartUI === 'function') updateCartUI(); // Reset badge and list
-
-    document.getElementById('app-screen').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-}
-
-// --- NAVIGATION ---
-function renderUsers() {
-    const div = document.getElementById('admin-users-list'); div.innerHTML = '';
-    DB.users.forEach(u => {
-        div.innerHTML += `<div class="prod-btn" style="cursor:default; margin-bottom:5px">
-                    <b>${u.user} <small style="color:var(--accent)">[${u.role}]</small></b>
-                    <div>
-                        <button class="icon-btn" style="font-size:18px" onclick="openUserModal('${u.user}')"><i class="bi bi-pencil"></i></button>
-                        ${u.user !== USER.username ? `<button class="icon-btn" style="font-size:18px; color:var(--danger)" onclick="deleteUser('${u.user}')"><i class="bi bi-trash"></i></button>` : ''}
+                <!-- LISTA GIORNALIERA -->
+                <div id="page-dailylist" class="page" style="background: rgba(20, 20, 20, 0.95); border-radius: 12px;">
+                    <div
+                        style="background: linear-gradient(to bottom, #4a4a4a 0%, #2b2b2b 50%, #1a1a1a 51%, #111 100%); border: 1px solid #555; border-radius: 12px; padding: 12px; margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 5px 15px rgba(0,0,0,0.5); text-align: center;">
+                        <h3
+                            style="margin: 0; color: #f1f1f1; font-family: 'Teko', sans-serif; letter-spacing: 2px; font-size: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; gap:10px;">
+                            <i class="bi bi-list-ul" style="color:var(--accent);"></i> GIORNALIERO
+                        </h3>
                     </div>
-                </div>`;
-    });
-}
 
-function openUserModal(username) {
-    document.getElementById('modal-user').querySelector('.modal-header span').innerText = username ? 'MODIFICA UTENTE' : 'NUOVO UTENTE';
-    const u = DB.users.find(x => x.user === username) || { user: '', pass: '', role: 'User' };
-    document.getElementById('user-old-name').value = u.user;
-    document.getElementById('user-name').value = u.user;
-    document.getElementById('user-pass').value = ''; // Don't show password
-    document.getElementById('user-pass').placeholder = username ? 'Lascia vuoto per non cambiare' : 'Password (Obbligatoria)';
-    document.getElementById('user-role').value = u.role;
-    document.getElementById('modal-user').style.display = 'flex';
-}
+                    <div
+                        style="background: transparent; border: 1px dashed var(--accent); padding: 12px; margin-bottom: 20px; border-radius: 8px; text-align: center;">
+                        <span style="color:var(--accent); font-size:16px; display:block; margin-bottom:6px;"><i
+                                class="bi bi-lightbulb-fill"></i></span>
+                        <span style="color:#ccc; font-size:13px; line-height:1.5;">Clicca sui prodotti sottostanti per
+                            dichiarare le giacenze attuali e aggiornare la <b>bozza collaborativa</b> in tempo
+                            reale.</span>
+                    </div>
 
-async function saveUser() {
-    const oldU = document.getElementById('user-old-name').value;
-    const newU = document.getElementById('user-name').value;
-    const newP = document.getElementById('user-pass').value;
-    const newR = document.getElementById('user-role').value;
-
-    if (!newU) return Swal.fire('Errore', 'Inserisci username', 'error');
-    if (!oldU && !newP) return Swal.fire('Errore', 'Password obbligatoria per nuovi utenti', 'error');
-
-    showLoader(true);
-    try {
-        let error;
-        if (oldU) {
-            const res = await dbClient.rpc('admin_update_user', { p_old_username: oldU, p_new_username: newU, p_new_password: newP, p_new_role: newR });
-            error = res.error || (res.data?.status === 'error' ? new Error(res.data.message) : null);
-        } else {
-            const res = await dbClient.rpc('admin_create_user', { p_username: newU, p_password: newP, p_role: newR });
-            error = res.error || (res.data?.status === 'error' ? new Error(res.data.message) : null);
-        }
-        if (error) throw error;
-
-        // Aggiorna l'elenco locale DB.users in tempo reale dopo aver aggiunto/modificato
-        const { data: usersData } = await dbClient.from('user_roles').select('*');
-        if (usersData) DB.users = usersData.map(u => ({ user: u.username, role: u.role, id: u.id }));
-
-        showLoader(false); closeModal('modal-user'); nav('admin-users');
-    } catch (err) { showLoader(false); Swal.fire('Errore', err.message, 'error'); }
-}
-
-async function deleteUser(u) {
-    if (confirm('Eliminare utente ' + u + '?')) {
-        showLoader(true);
-        try {
-            const { data, error } = await dbClient.rpc('admin_delete_user', { p_username: u });
-            if (error || data?.status === 'error') throw error || new Error(data?.message);
-
-            // Update local cache
-            DB.users = DB.users.filter(x => x.user !== u);
-
-            showLoader(false);
-            nav('admin-users');
-        } catch (err) {
-            showLoader(false);
-            Swal.fire('Errore', err.message, 'error');
-        }
-    }
-}
+                    <div class="scrolling-tabs" id="dept-tabs"></div>
+                    <div id="daily-list-body" style="padding-bottom:80px"></div>
+                </div>
 
 
-// --- ESPOSIZIONE GLOBALE (Per chiamate HTML onclick) ---
-window.attemptLogin = attemptLogin;
-window.initUserSession = initUserSession;
-window.openUserProfile = openUserProfile;
-window.logoutConfirm = logoutConfirm;
-window.checkActiveSession = checkActiveSession;
-window.logout = logout;
-window.renderUsers = renderUsers;
-window.openUserModal = openUserModal;
-window.saveUser = saveUser;
-window.deleteUser = deleteUser;
+                <!-- OPERATIONS (Single Column) -->
+                <div id="page-operations" class="page">
+                    <div class="narrow-content-wrapper cantiere-container">
+                        <div class="industrial-header">
+                            <h3
+                                style="color:var(--accent); margin:0; font-family:'Teko'; font-size:28px; letter-spacing:2px; display:flex; justify-content:center; align-items:center; gap:10px;">
+                                <i class="bi bi-hammer"></i>REGISTRA MOVIMENTO
+                            </h3>
+                        </div>
 
+                        <div class="tool-wrap"
+                            style="text-align:center; display:flex; flex-direction:column; gap:5px; padding:8px; margin-bottom:5px;">
+                            <div style="margin-bottom:5px;">
+                                <span class="industrial-label"
+                                    style="font-size:14px; color:#fff; text-shadow:0 0 5px rgba(255,255,255,0.4); font-weight:900; margin-bottom:2px;">OPERAZIONE</span>
+                                <select id="op-type-select" class="dark-input" onchange="updateOpTypeUI()"
+                                    style="border-left:4px solid var(--accent); font-weight:bold; letter-spacing:1px; text-align:center; text-align-last:center; width:100%; max-width:300px; margin:0 auto; padding:6px; font-size:14px;">
+                                </select>
+                            </div>
+
+                            <!-- WAREHOUSE SELECTORS HIDDEN (Spostati nel popup) -->
+                            <div id="op-wh-grid" style="display:none;">
+                                <select id="op-from-wh" class="hidden"></select>
+                                <select id="op-to-wh" class="hidden"></select>
+                            </div>
+                        </div>
+
+                        <div class="tool-wrap" style="padding:8px; margin-bottom:5px;">
+                            <div id="op-cat-chips"
+                                style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; margin-bottom:4px; -webkit-overflow-scrolling:touch;">
+                            </div>
+                            <div id="op-active-filter-label"
+                                style="text-align:center; font-family:'Teko'; font-size:13px; color:#888; letter-spacing:1px; margin-bottom:6px;">
+                                FILTRO ATTIVO: <span style="color:var(--accent)">TUTTI</span></div>
+
+                            <div class="search-wrapper" style="margin-bottom:8px">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="op-search" class="dark-input search-tool"
+                                    placeholder="CERCA PRODOTTO..." onkeyup="renderOpSearch()"
+                                    style="padding:8px; font-size:14px;">
+                            </div>
+
+                            <div id="op-prod-list"
+                                style="max-height:280px; overflow-y:auto; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+                            </div>
+                        </div>
+
+                        <!-- MOBILE CART OVERLAY (Spostato a fine body) -->
+                        <!-- CART CONTAINER (Spostato a fine body) -->
+                    </div>
+                </div>
+
+                <!-- ADMIN REGISTRO MOVIMENTI (Log Table) -->
+                <div id="page-admin-movements-log" class="page">
+                    <!-- STICKY HEADER AREA -->
+                    <div
+                        style="position: sticky; top: 60px; z-index: 10; background: #111; padding: 10px 0; border-bottom: 2px solid #222; margin-bottom: 15px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; max-width:600px; margin:0 auto; padding: 0 10px;">
+                            <h3 class="page-title" style="margin: 0; font-size: 24px;"><i
+                                    class="bi bi-journal-text"></i> MOVIMENTI</h3>
+                            <button class="icon-btn"
+                                style="background:#aa0000; color:white; border-radius:6px; padding:6px 16px; font-size:12px; font-weight:bold; border:1px solid #ff4444;"
+                                onclick="promptClearMovements()">
+                                <i class="bi bi-trash"></i> REGISTRO
+                            </button>
+                        </div>
+
+                        <!-- FILTRO RICERCA -->
+                        <div class="search-wrapper" style="max-width:600px; margin: 15px auto 0 auto; padding: 0 10px;">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="mov-log-search" class="dark-input"
+                                placeholder="Cerca prodotto, utente o operazione..." onkeyup="filterMovements()"
+                                style="padding:10px; font-size:14px; border-radius:8px;">
+                        </div>
+                    </div>
+
+                    <div id="mov-log-body" style="display:flex; flex-direction:column; gap:12px; padding-bottom:50px;">
+                        <!-- Movement Cards injected here by JS -->
+                    </div>
+                </div>
+
+                <!-- ADMIN PRODOTTI (Restored) -->
+                <div id="page-admin-products" class="page">
+                    <div class="search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="admin-prod-search" class="dark-input" placeholder="Cerca prodotto..."
+                            onkeyup="renderAdminProds()">
+                    </div>
+                    <div id="admin-prod-list" style="padding-bottom:50px"></div>
+                </div>
+                <!-- ADMIN UTENTI -->
+                <div id="page-admin-users" class="page">
+                    <h3 style="color:var(--accent)"><i class="bi bi-gear-fill"></i> UTENTI</h3>
+                    <button class="btn-neon" style="font-size:18px; margin-bottom:20px" onclick="openUserModal()">+
+                        NUOVO UTENTE</button>
+                    <div id="admin-users-list"></div>
+                </div>
+
+                <!-- ADMIN REPORTS -->
+                <div id="page-admin-reports" class="page" style="max-width:600px; margin:0 auto">
+
+                    <div
+                        style="background: linear-gradient(to bottom, #4a4a4a 0%, #2b2b2b 50%, #1a1a1a 51%, #111 100%); border: 1px solid #555; border-radius: 12px; padding: 12px; margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 5px 15px rgba(0,0,0,0.5); text-align: center;">
+                        <h3
+                            style="margin: 0; color: #f1f1f1; font-family: 'Teko', sans-serif; letter-spacing: 2px; font-size: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; gap:10px;">
+                            <i class="bi bi-clock-history" style="color:var(--accent);"></i> ARCHIVIO GIORNALIERI
+                        </h3>
+                    </div>
+
+                    <div
+                        style="background: transparent; border: 1px dashed var(--accent); padding: 12px; margin-bottom: 25px; border-radius: 8px; text-align: center;">
+                        <span style="color:var(--accent); font-size:16px; display:block; margin-bottom:6px;"><i
+                                class="bi bi-info-circle-fill"></i> STORICO REPORT</span>
+                        <span style="color:#ccc; font-size:13px; line-height:1.5;">Qui trovi la lista giornaliera della
+                            cucina. Clicca su una data per visualizzare giacenze, confrontarle e stamparle.</span>
+                    </div>
+
+                    <div
+                        style="margin-bottom:25px; background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #222; display:flex; flex-direction:column; align-items:center;">
+                        <label
+                            style="color:var(--accent); font-size:12px; font-weight:bold; letter-spacing:1px; margin-bottom:8px;"><i
+                                class="bi bi-funnel-fill"></i> FILTRO FORNITORE</label>
+                        <select id="report-supp-filter" class="dark-input" onchange="loadReports()"
+                            style="text-align:center; max-width:80%;">
+                            <option value="ALL">TUTTI I FORNITORI</option>
+                        </select>
+                    </div>
+
+                    <div id="report-view-body"
+                        style="padding-bottom:50px; display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+                <!-- ADMIN WAREHOUSES -->
+                <div id="page-admin-warehouses" class="page">
+                    <div style="max-width: 600px; margin: 0 auto; padding:15px">
+                        <h3
+                            style="color:var(--accent); margin-bottom:15px; font-family:'Teko'; font-size:28px; text-align:center;">
+                            <i class="bi bi-gear-fill"></i> MAGAZZINI
+                        </h3>
+                        <p style="color:#aaa; font-size:14px; margin-bottom:20px; text-align:center;">Modifica i
+                            nomi
+                            dei magazzini
+                            in uso. Il cambio nome si propagherà nell'inventario.</p>
+                        <div id="admin-warehouses-list" style="display:flex; flex-direction:column; gap:10px;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== PAGE: GESTIONE AVVISI (admin-only) ===== -->
+                <div id="page-admin-notices" class="page" style="display:none;">
+                    <div style="width:100%; max-width:860px; margin:0 auto; padding:20px; box-sizing:border-box;">
+
+                        <div class="industrial-header" style="margin-bottom:20px;">
+                            <h2 class="industrial-label" style="padding:15px; margin:0;">
+                                <i class="bi bi-megaphone-fill"></i> GESTIONE AVVISI
+                            </h2>
+                        </div>
+
+                        <!-- CREA AVVISO -->
+                        <div
+                            style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:18px; margin-bottom:24px;">
+                            <h4
+                                style="color:var(--accent); font-family:'Teko'; font-size:22px; margin:0 0 12px 0; letter-spacing:1px;">
+                                <i class="bi bi-plus-circle"></i> NUOVO AVVISO
+                            </h4>
+
+                            <!-- Toolbar rich text -->
+                            <div class="notice-toolbar">
+                                <!-- Formattazione testo -->
+                                <button class="notice-tool-btn" data-cmd="bold"
+                                    onclick="document.execCommand('bold'); updateNoticeToolbar()"
+                                    title="Grassetto"><b>B</b></button>
+                                <button class="notice-tool-btn" data-cmd="italic"
+                                    onclick="document.execCommand('italic'); updateNoticeToolbar()"
+                                    title="Corsivo"><i>I</i></button>
+                                <button class="notice-tool-btn" data-cmd="underline"
+                                    onclick="document.execCommand('underline'); updateNoticeToolbar()"
+                                    title="Sottolineato"><u>U</u></button>
+                                <button class="notice-tool-btn" data-cmd="strikeThrough"
+                                    onclick="document.execCommand('strikeThrough'); updateNoticeToolbar()"
+                                    title="Barrato" style="text-decoration:line-through;">S</button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <!-- Allineamento -->
+                                <button class="notice-tool-btn" data-cmd="justifyLeft"
+                                    onclick="document.execCommand('justifyLeft'); updateNoticeToolbar()"
+                                    title="Allinea a sinistra"><i class="bi bi-text-left"></i></button>
+                                <button class="notice-tool-btn" data-cmd="justifyCenter"
+                                    onclick="document.execCommand('justifyCenter'); updateNoticeToolbar()"
+                                    title="Centra"><i class="bi bi-text-center"></i></button>
+                                <button class="notice-tool-btn" data-cmd="justifyRight"
+                                    onclick="document.execCommand('justifyRight'); updateNoticeToolbar()"
+                                    title="Allinea a destra"><i class="bi bi-text-right"></i></button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <!-- Colori -->
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#FFD700')"
+                                    title="Testo dorato" style="color:#FFD700;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#ff4d4d')"
+                                    title="Testo rosso" style="color:#ff4d4d;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#4dff88')"
+                                    title="Testo verde" style="color:#4dff88;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#88ccff')"
+                                    title="Testo azzurro" style="color:#88ccff;">A</button>
+                                <button class="notice-tool-btn" onclick="applyNoticeColor('#eee')"
+                                    title="Colore normale">A</button>
+                                <span style="width:1px; background:#444; margin:0 2px;"></span>
+                                <button class="notice-tool-btn"
+                                    onclick="document.getElementById('notice-editor').innerHTML=''"
+                                    title="Cancella tutto"><i class="bi bi-trash"></i></button>
+                            </div>
+
+                            <!-- Area testo ricco -->
+                            <div id="notice-editor" contenteditable="true" spellcheck="false"
+                                placeholder="Scrivi il testo dell'avviso..."></div>
+
+                            <!-- Durata + pubblica -->
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <div style="flex:1; min-width:180px;">
+                                    <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">DURATA
+                                        AVVISO</label>
+                                    <select id="notice-duration" class="dark-select"
+                                        style="width:100%; font-size:13px; height:36px; padding:4px 8px;">
+                                        <option value="1">1 ora</option>
+                                        <option value="4">4 ore</option>
+                                        <option value="8">8 ore</option>
+                                        <option value="24" selected>24 ore</option>
+                                        <option value="48">48 ore</option>
+                                        <option value="168">7 giorni</option>
+                                        <option value="0">Fino a eliminazione</option>
+                                    </select>
+                                </div>
+                                <button class="btn-neon" style="margin-top:18px; padding:8px 24px;"
+                                    onclick="publishNotice()">
+                                    <i class="bi bi-send-fill"></i> PUBBLICA AVVISO
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- AVVISI ATTIVI -->
+                        <div style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:18px;">
+                            <h4
+                                style="color:var(--accent); font-family:'Teko'; font-size:22px; margin:0 0 14px 0; letter-spacing:1px;">
+                                <i class="bi bi-list-ul"></i> AVVISI ATTIVI
+                            </h4>
+                            <div id="notices-list">
+                                <div style="text-align:center; color:#555; padding:20px; font-style:italic;">
+                                    Caricamento...</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- ===== END PAGE NOTICES ===== -->
+
+            </div>
+            <!-- ===== END PAGE NOTICES ===== -->
+
+        </div> <!-- End of .main-content -->
+    </div> <!-- End of .app-container -->
+
+
+
+    <!-- MODAL REPORT PRINT -->
+    <div id="modal-report-print" class="modal">
+        <div class="modal-body" style="max-width:360px; color:white; padding:15px 10px">
+            <div class="modal-header" style="justify-content: center; position: relative">
+                <span style="color:var(--accent); font-family:'Teko'; letter-spacing:1px; font-size:24px">DETTAGLIO
+                    REPORT</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-report-print')"
+                    style="position: absolute; right: 15px"></i>
+            </div>
+            <div id="report-print-content"
+                style="max-height:60vh; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; align-items:center">
+            </div>
+            <button class="btn-neon" onclick="printReportDiv()">STAMPA</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PROD -->
+    <div id="modal-edit-prod" class="modal">
+        <div class="modal-body">
+            <div class="modal-header">
+                <span>MODIFICA</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-edit-prod')"></i>
+            </div>
+            <div id="edit-form-content"></div>
+            <button class="btn-neon" style="margin-top:20px" onclick="saveProductEdits()">SALVA
+                MODIFICHE</button>
+
+
+        </div>
+    </div>
+
+    <!-- MODAL USER -->
+    <div id="modal-user" class="modal">
+        <div class="modal-body">
+            <div class="modal-header">
+                <span>UTENTE</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-user')"></i>
+            </div>
+            <input type="hidden" id="user-old-name">
+            <input id="user-name" class="dark-input" placeholder="Username" style="margin-bottom:10px">
+            <input id="user-pass" class="dark-input" placeholder="Password" style="margin-bottom:10px">
+            <select id="user-role" class="dark-select">
+                <option value="User">User</option>
+                <option value="Admin">Admin</option>
+            </select>
+            <button class="btn-neon" onclick="saveUser()" style="margin-top:20px">SALVA</button>
+        </div>
+    </div>
+
+    <!-- MODAL INCONGRUENZA -->
+    <div id="modal-mismatch" class="modal">
+        <div class="modal-body" style="padding: 25px;">
+            <div class="modal-header" style="margin-bottom: 20px;">
+                <span style="font-family:'Teko'; font-size:26px; color:#FF2222; letter-spacing:1px;"><i
+                        class="bi bi-exclamation-triangle-fill"></i> SEGNALA INCONGRUENZA</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-mismatch')" style="font-size:24px;"></i>
+            </div>
+
+            <div class="modal-form-group" style="margin-bottom: 15px;">
+                <label style="color:var(--accent); font-weight:bold; letter-spacing:1px;">PRODOTTO</label>
+                <input type="text" id="mismatch-search" class="dark-input search-tool" placeholder="Cerca prodotto..."
+                    onkeyup="filterMismatchProds()"
+                    style="margin-bottom:10px; font-size:16px; padding:10px 12px; border-radius:8px;">
+                <select id="mismatch-product" class="dark-input"
+                    style="text-align:center; text-align-last:center; font-size:16px; padding:10px 12px; border-radius:8px; line-height:normal; height:45px;"></select>
+            </div>
+
+            <div class="modal-form-group" style="margin-bottom: 15px;">
+                <label style="color:var(--accent); font-weight:bold; letter-spacing:1px;">MAGAZZINO FISICO</label>
+                <select id="mismatch-warehouse" class="dark-input"
+                    style="text-align:center; text-align-last:center; font-size:16px; padding:10px 12px; border-radius:8px; line-height:normal; height:45px;"></select>
+            </div>
+
+            <div class="modal-form-group" style="margin-bottom: 20px;">
+                <label style="color:var(--accent); font-weight:bold; letter-spacing:1px;">NOTE / DISCREPANZA
+                    RISCONTRATA</label>
+                <textarea id="mismatch-notes" class="dark-input"
+                    style="height:120px; text-align:left; resize:none; font-size:16px; padding:12px; border-radius:8px;"
+                    placeholder="Es: 'Sul gestionale segna 5 pezzi ma in realtà ce ne sono 3' ..."></textarea>
+            </div>
+
+            <button class="btn-neon" onclick="submitMismatch()"
+                style="margin-top:10px; width:100%; padding:15px; font-size:18px; background:var(--danger); color:white; border:none; box-shadow: 0 4px 15px rgba(255,34,34,0.3); border-radius:8px;">
+                <i class="bi bi-send-fill" style="margin-right:8px;"></i> INVIA SEGNALAZIONE
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DASHBOARD NOTIFICHE -->
+    <div id="modal-notifications" class="modal">
+        <div class="modal-body" style="max-height:80vh; display:flex; flex-direction:column">
+            <div class="modal-header">
+                <span>NOTIFICHE ADMIN</span>
+                <i class="bi bi-x-lg close-icon" onclick="closeModal('modal-notifications')"></i>
+            </div>
+            <div id="notif-list" style="overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:10px">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- End of #app-screen -->
+
+    <!-- CHAT DRAWER -->
+    <div id="chat-drawer">
+        <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color:var(--accent); font-family:'Teko'; letter-spacing:1px; font-size:22px; line-height:1;"><i
+                    class="bi bi-chat-dots-fill"></i> CANTIERE CHAT</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <!-- SVUOTA TUTTO will only be appended here by JS for Admins later, but we keep its default position relative -->
+                <button class="btn-clear-chat" onclick="clearChat()" id="btn-admin-clear-chat"><i
+                        class="bi bi-trash"></i> SVUOTA TUTTO</button>
+                <i class="bi bi-x-lg close-icon" onclick="toggleChat()" style="font-size:20px;"></i>
+            </div>
+        </div>
+        <div id="chat-messages"></div>
+        <div class="chat-input-area">
+            <div class="emoji-bar">
+                <button class="emoji-btn" onclick="addEmoji('✅')">✅</button>
+                <button class="emoji-btn" onclick="addEmoji('⚠️')">⚠️</button>
+                <button class="emoji-btn" onclick="addEmoji('📦')">📦</button>
+                <button class="emoji-btn" onclick="addEmoji('🚚')">🚚</button>
+                <button class="emoji-btn" onclick="addEmoji('😂')">😂</button>
+                <button class="emoji-btn" onclick="addEmoji('👍')">👍</button>
+            </div>
+            <!-- @MENTION: no inline dropdown, uses SweetAlert popup -->
+
+            <div style="display:flex; gap:10px; position:relative;">
+                <input type="text" id="chat-input" class="dark-input"
+                    placeholder="Scrivi un messaggio... (@nome per taggare)" oninput="handleChatInput(event)"
+                    onkeyup="handleChatKeyUp(event)" onkeydown="handleChatKeyDown(event)">
+                <button class="icon-btn"
+                    style="background:var(--accent); color:black; border-radius:4px; padding:0 15px; font-size:20px"
+                    onclick="sendChatMessage()">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/ui.js"></script>
+
+    <!-- MOBILE CART OVERLAY -->
+    <div id="cart-overlay" class="cart-overlay global-hidden" onclick="toggleCartDrawer()"></div>
+
+    <!-- CART CONTAINER (Inline on Desktop, Drawer on Mobile) -->
+    <div id="op-cart-container" class="global-hidden">
+        <div class="cart-drawer-handle" onclick="toggleCartDrawer()" style="padding-top:18px;">
+            <i class="bi bi-chevron-up" id="cart-handle-icon" style="font-size:14px;"></i>
+            <i class="bi bi-clipboard-data" style="font-size:14px;"></i>
+            CODA OPERAZIONI
+        </div>
+
+        <button id="btn-confirm-op" class="btn-neon" onclick="submitOpMovements()"
+            style="width:auto; display:none; align-self:center; background:var(--accent); color:black; border:none; box-shadow: 0 4px 15px rgba(255,215,0,0.2); margin:0 auto 8px auto; padding:7px 20px; font-size:14px;">
+            <i class="bi bi-check-circle-fill"></i> CONFERMA E REGISTRA
+        </button>
+
+        <div id="op-cart-list"
+            style="max-height:450px; overflow-y:auto; margin-bottom:0; color:#666; font-style:italic; padding:10px; text-align:center;">
+            Lista vuota...
+        </div>
+    </div>
+</body>
+
+</html>
