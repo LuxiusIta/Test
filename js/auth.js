@@ -93,13 +93,12 @@ function initUserSession(roleData) {
         OneSignal.init({
             appId: "f30c0e52-8b70-44e1-8d2b-7a263e272bc8",
             safari_web_id: "",
-            notifyButton: {
-                enable: false,
-            },
+            notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
             allow_message_focus: true,
-            // Parametri fondamentali perché il sito si trova in una sottocartella /Test/ su GitHub Pages
-            path: "/Test/",
+            // PATH ASSOLUTO FONDAMENTALE PER GITHUB PAGES SOTTOCARTELLE
+            // Se il service worker non viene trovato dal browser, l'iscrizione fallisce e rimane a (0) 
+            path: "https://luxiusita.github.io/Test/",
             serviceWorkerParam: { scope: "/Test/" },
             serviceWorkerPath: "OneSignalSDKWorker.js"
         });
