@@ -140,6 +140,18 @@ async function logout() {
 
     USER = null; DAILY_DATA = {}; OP_CART = [];
     if (inventorySubscription) { dbClient.removeChannel(inventorySubscription); inventorySubscription = null; }
+
+    // Forze clear Operations Cart UI
+    const cartContainer = document.getElementById('op-cart-container');
+    const cartOverlay = document.getElementById('cart-overlay');
+    if (cartContainer) {
+        cartContainer.classList.remove('active');
+        cartContainer.classList.add('global-hidden'); // Nasconde completamente dalla vista Login
+    }
+    if (cartOverlay) cartOverlay.classList.remove('active');
+    document.body.classList.remove('no-scroll');
+    if (typeof updateCartUI === 'function') updateCartUI(); // Reset badge and list
+
     document.getElementById('app-screen').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('username').value = '';

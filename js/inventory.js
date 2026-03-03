@@ -599,6 +599,21 @@ function openQtyPopup(p, context, initialVal = 0, editIdx = -1) {
                         <div style="max-height:180px; overflow-y:auto;">${buildWhRadioGrid('s-to', defaultToWh, false)}</div>
                     </div>`;
         } else if (type.includes('CUCINA')) {
+            // Check if there is ANY stock available for this product
+            const totalStock = DB.warehouses.filter(w => w.name !== 'Cucina').reduce((acc, w) => acc + (DB.inventory[p.ID_Prodotto]?.[w.name] || 0), 0);
+
+            if (totalStock <= 0) {
+                Swal.fire({
+                    title: p.Nome,
+                    html: `<div style="text-align:center; padding:20px; color:#ffcc00; font-size:18px; font-weight:bold; margin-top:10px;"><i class="bi bi-exclamation-triangle-fill" style="font-size:30px; display:block; margin-bottom:10px;"></i>Nessuna giacenza disponibile in nessun magazzino.</div>`,
+                    confirmButtonText: 'HO CAPITO',
+                    confirmButtonColor: '#555',
+                    background: '#1a1a1a',
+                    color: '#fff'
+                });
+                return; // Stop here, do not show the qty selector
+            }
+
             whEditHtml = `
                     <div style="margin-bottom:15px; text-align:left">
                         <div style="font-size:12px; color:var(--accent); margin-bottom:5px; font-weight:bold;">DAL MAGAZZINO:</div>
