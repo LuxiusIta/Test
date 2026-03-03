@@ -171,9 +171,13 @@ async function openUserProfile() {
 
 function togglePushNotifications(enable) {
     if (!window.OneSignalDeferred) return;
-    OneSignalDeferred.push(function (OneSignal) {
+    OneSignalDeferred.push(async function (OneSignal) {
         if (enable) {
-            OneSignal.Slidedown.promptPush();
+            // Su iOS le "Slidedown" a volte falliscono, usiamo il metodo nativo
+            await OneSignal.Notifications.requestPermission();
+            if (USER && USER.username) {
+                OneSignal.login(USER.username);
+            }
         } else {
             OneSignal.User.PushSubscription.optOut();
         }
