@@ -98,7 +98,7 @@ function initUserSession(roleData) {
             allow_message_focus: true,
             // PATH ASSOLUTO FONDAMENTALE PER GITHUB PAGES SOTTOCARTELLE
             // Se il service worker non viene trovato dal browser, l'iscrizione fallisce e rimane a (0) 
-            path: "https://luxiusita.github.io/Test/",
+            path: "/Test/",
             serviceWorkerParam: { scope: "/Test/" },
             serviceWorkerPath: "OneSignalSDKWorker.js"
         });
