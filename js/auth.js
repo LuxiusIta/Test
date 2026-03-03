@@ -172,19 +172,24 @@ async function openUserProfile() {
     });
 }
 
-function togglePushNotifications(enable) {
-    if (!window.OneSignalDeferred) return;
-    OneSignalDeferred.push(async function (OneSignal) {
+async function togglePushNotifications(enable) {
+    if (!window.OneSignal) return;
+
+    try {
         if (enable) {
-            // Su iOS le "Slidedown" a volte falliscono, usiamo il metodo nativo
-            await OneSignal.Notifications.requestPermission();
+            // Su iOS PWA (16.4+) la chiamata deve essere diretta e asincrona legata al click
+            // Se la mettiamo dentro "OneSignalDeferred" il browser la scarta.
+            await window.OneSignal.Notifications.requestPermission();
+
             if (USER && USER.username) {
-                OneSignal.login(USER.username);
+                window.OneSignal.login(USER.username);
             }
         } else {
-            OneSignal.User.PushSubscription.optOut();
+            window.OneSignal.User.PushSubscription.optOut();
         }
-    });
+    } catch (e) {
+        console.error("Errore iOS Push:", e);
+    }
 }
 
 async function logoutConfirm() {
