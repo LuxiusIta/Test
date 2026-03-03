@@ -1158,13 +1158,15 @@ body.no-scroll {
 
 @media(max-width: 768px) {
     #chat-drawer {
-        width: 85vw;
-        max-width: 330px;
-        top: 60px;
-        height: 65vh;
+        width: 90vw;
+        max-width: 350px;
+        top: auto;
+        bottom: 0;
+        height: calc(100dvh - 60px);
+        max-height: calc(100vh - 60px);
         border-top-left-radius: 15px;
-        border-bottom-left-radius: 15px;
-        box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.8);
+        border-bottom-left-radius: 0;
+        box-shadow: -5px 0px 15px rgba(0, 0, 0, 0.8);
     }
 
     #chat-drawer .chat-header span {
