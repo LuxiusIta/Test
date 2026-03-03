@@ -100,7 +100,7 @@ function initUserSession(roleData) {
             // Se il service worker non viene trovato dal browser, l'iscrizione fallisce e rimane a (0) 
             path: "/Test/",
             serviceWorkerParam: { scope: "/Test/" },
-            serviceWorkerPath: "OneSignalSDKWorker.js"
+            serviceWorkerPath: "/Test/OneSignalSDKWorker.js"
         });
 
         if (USER && USER.username) {
