@@ -177,8 +177,8 @@ async function togglePushNotifications(enable) {
     try {
         if (enable) {
             // Su iOS PWA (16.4+) la chiamata deve essere diretta e asincrona legata al click
-            // Se la mettiamo dentro "OneSignalDeferred" il browser la scarta.
-            await window.OneSignal.Notifications.requestPermission();
+            // Utilizziamo optIn() che gestisce l'intero ciclo di vita dell'iscrizione (token e prompt)
+            await window.OneSignal.User.PushSubscription.optIn();
 
             if (USER && USER.username) {
                 window.OneSignal.login(USER.username);
