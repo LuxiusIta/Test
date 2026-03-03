@@ -705,10 +705,10 @@
     <script src="js/ui.js"></script>
 
     <!-- MOBILE CART OVERLAY -->
-    <div id="cart-overlay" class="cart-overlay" onclick="toggleCartDrawer()"></div>
+    <div id="cart-overlay" class="cart-overlay global-hidden" onclick="toggleCartDrawer()"></div>
 
     <!-- CART CONTAINER (Inline on Desktop, Drawer on Mobile) -->
-    <div id="op-cart-container">
+    <div id="op-cart-container" class="global-hidden">
         <div class="cart-drawer-handle" onclick="toggleCartDrawer()" style="padding-top:18px;">
             <i class="bi bi-chevron-up" id="cart-handle-icon" style="font-size:14px;"></i>
             <i class="bi bi-clipboard-data" style="font-size:14px;"></i>
