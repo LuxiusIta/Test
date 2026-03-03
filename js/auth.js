@@ -71,32 +71,115 @@ function initUserSession(roleData) {
         }
         if (userBadge) {
             userBadge.style.cursor = 'pointer';
-            userBadge.onclick = () => { if (typeof logoutConfirm === 'function') logoutConfirm(); };
+            userBadge.onclick = () => { if (typeof openUserProfile === 'function') openUserProfile(); };
         }
     } else {
-        // Desktop behavior: ensure no accidental clicks
+        // Desktop behavior: cursor pointer for profile
         if (pageTitle) {
             pageTitle.style.cursor = 'default';
             pageTitle.onclick = null;
         }
         if (userBadge) {
-            userBadge.style.cursor = 'default';
-            userBadge.onclick = null;
+            userBadge.style.cursor = 'pointer';
+            userBadge.onclick = () => { if (typeof openUserProfile === 'function') openUserProfile(); };
         }
     }
 
     setupRealtime();
     nav('dashboard');
+    // OneSignal Push Notifications Init
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(function (OneSignal) {
+        OneSignal.init({
+            appId: "f30c0e52-8b70-44e1-8d2b-7a263e272bc8",
+            safari_web_id: "",
+            notifyButton: {
+                enable: false,
+            },
+            allowLocalhostAsSecureOrigin: true,
+        });
+
+        if (USER && USER.username) {
+            OneSignal.login(USER.username);
+        }
+    });
+
     // Mostra avvisi attivi dopo il login
     setTimeout(() => checkAndShowNotices(), 800);
 }
 
-async function logoutConfirm() {
-    if (window.innerWidth > 768) {
-        logout();
-        return;
+// --- USER PROFILE & LOGOUT ---
+async function openUserProfile() {
+    if (!USER) return;
+
+    // Controlla lo stato attuale delle notifiche OneSignal
+    let isSubscribed = false;
+    if (window.OneSignal) {
+        isSubscribed = window.OneSignal.User.PushSubscription.optedIn;
     }
 
+    const toggleHtml = `
+        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="bi bi-bell-fill" style="color:var(--accent); font-size:24px;"></i>
+                <div style="text-align:left;">
+                    <div style="font-family:'Teko'; font-size:20px; color:#fff; letter-spacing:1px; line-height:1;">NOTIFICHE PUSH</div>
+                    <div style="font-size:12px; color:#888;">Avvisi e Messaggi Chat</div>
+                </div>
+            </div>
+            
+            <label class="switch" style="position:relative; display:inline-block; width:60px; height:34px;">
+                <input type="checkbox" id="push-toggle" ${isSubscribed ? 'checked' : ''} onchange="togglePushNotifications(this.checked)" style="opacity:0; width:0; height:0;">
+                <span class="slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:34px;"></span>
+            </label>
+        </div>
+        
+        <style>
+            .switch input:checked + .slider { background-color: var(--accent); }
+            .switch input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
+            .switch input:checked + .slider:before { transform: translateX(26px); }
+            .slider:before { position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background-color:black; transition:.4s; border-radius:50%; }
+        </style>
+    `;
+
+    Swal.fire({
+        title: `<span style="font-family:'Teko'; font-size:28px; letter-spacing:1px;">PROFILO UTENTE</span>`,
+        html: `
+            <div style="margin-bottom:20px;">
+                <div style="font-size:24px; font-weight:bold; color:#fff;">${USER.username.toUpperCase()}</div>
+                <div style="font-size:14px; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-weight:bold;">RUOLO: ${USER.role}</div>
+            </div>
+            ${toggleHtml}
+        `,
+        background: '#1a1a1a',
+        color: '#ccc',
+        showCancelButton: true,
+        showConfirmButton: true,
+        confirmButtonColor: 'var(--danger)',
+        cancelButtonColor: '#333',
+        confirmButtonText: '<i class="bi bi-box-arrow-right"></i> DISCONNETTI',
+        cancelButtonText: 'CHIUDI',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            logoutConfirm();
+        }
+    });
+}
+
+function togglePushNotifications(enable) {
+    if (!window.OneSignalDeferred) return;
+    OneSignalDeferred.push(function (OneSignal) {
+        if (enable) {
+            OneSignal.Slidedown.promptPush();
+        } else {
+            OneSignal.User.PushSubscription.optOut();
+        }
+    });
+}
+
+async function logoutConfirm() {
+    // Il logout effettivo rimane identico a prima
     const { isConfirmed } = await Swal.fire({
         title: 'DISCONNESSIONE',
         text: "Vuoi uscire dal sistema?",
@@ -235,6 +318,7 @@ async function deleteUser(u) {
 // --- ESPOSIZIONE GLOBALE (Per chiamate HTML onclick) ---
 window.attemptLogin = attemptLogin;
 window.initUserSession = initUserSession;
+window.openUserProfile = openUserProfile;
 window.logoutConfirm = logoutConfirm;
 window.checkActiveSession = checkActiveSession;
 window.logout = logout;

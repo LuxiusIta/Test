@@ -440,6 +440,24 @@ async function sendChatMessage() {
         Swal.fire('Errore', 'Impossibile inviare il messaggio', 'error');
     } else {
         fetchChat();
+
+        // --- SEND PUSH NOTIFICATION IF USER IS MENTIONED ---
+        // Look for @Username tags in the plain text
+        const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+        let match;
+        const mentionedUsers = new Set();
+        while ((match = mentionRegex.exec(text)) !== null) {
+            mentionedUsers.add(match[1]);
+        }
+
+        if (mentionedUsers.size > 0 && typeof sendPushNotification === 'function') {
+            for (const targetUser of mentionedUsers) {
+                // Don't notify yourself
+                if (targetUser.toLowerCase() !== USER.username.toLowerCase()) {
+                    sendPushNotification(`Vuoi essere taggato in Chat da ${USER.username}`, text, targetUser);
+                }
+            }
+        }
     }
 }
 
@@ -613,6 +631,16 @@ async function publishNotice() {
         editor.innerHTML = '';
         Swal.fire({ icon: 'success', title: 'Avviso pubblicato!', timer: 1500, showConfirmButton: false });
         loadNotices();
+
+        // Invia Notifica Push (spogliando l'HTML)
+        // Creiamo un div temporaneo per estrarre solo il testo puro, senza tag
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const plainText = tempDiv.textContent || tempDiv.innerText || "";
+
+        if (typeof sendPushNotification === 'function') {
+            sendPushNotification("Nuovo Avviso Admin", plainText);
+        }
     }
 }
 
@@ -767,5 +795,4 @@ window.deleteNotice = deleteNotice;
 window.checkAndShowNotices = checkAndShowNotices;
 window.applyNoticeColor = applyNoticeColor;
 window.updateNoticeToolbar = updateNoticeToolbar;
-
 

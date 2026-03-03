@@ -11,6 +11,9 @@
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
+    <!-- ONESIGNAL PUSH NOTIFICATIONS -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
     <!-- PWA & MOBILE ICONS -->
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -141,11 +144,15 @@
 
         <!-- TOP BAR -->
         <div class="top-header" style="justify-content:flex-start">
+            <div class="header-chain"></div>
+            <i class="bi bi-gear-fill header-gear gear-left" style="display:none;"></i>
+            <i class="bi bi-gear-fill header-gear gear-right" style="display:none;"></i>
+
             <img src="https://i.imgur.com/rgc71OX.png" class="mobile-logo" style="display:none;" alt="Logo">
 
             <div class="mobile-header-row">
                 <div class="header-title" id="header-page-title" onclick="openPagePicker()">MAGAZZINO</div>
-                <div class="user-badge" id="user-display" onclick="logoutConfirm()"></div>
+                <div class="user-badge" id="user-display" onclick="openUserProfile()"></div>
             </div>
 
             <div class="header-controls">
