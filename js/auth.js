@@ -92,7 +92,7 @@ function initUserSession(roleData) {
     OneSignalDeferred.push(function (OneSignal) {
         OneSignal.init({
             appId: "f30c0e52-8b70-44e1-8d2b-7a263e272bc8",
-            safari_web_id: "",
+            safari_web_id: "web.onesignal.auto.115f8fcb-d4e8-44f7-85e0-0f5ff0e5093f",
             notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
             allow_message_focus: true,
