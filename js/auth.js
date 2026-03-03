@@ -97,8 +97,11 @@ function initUserSession(roleData) {
                 enable: false,
             },
             allowLocalhostAsSecureOrigin: true,
-            // Forza la visualizzazione del banner di sistema anche se l'app è aperta
-            allow_message_focus: true
+            allow_message_focus: true,
+            // Parametri fondamentali perché il sito si trova in una sottocartella /Test/ su GitHub Pages
+            path: "/Test/",
+            serviceWorkerParam: { scope: "/Test/" },
+            serviceWorkerPath: "OneSignalSDKWorker.js"
         });
 
         if (USER && USER.username) {
