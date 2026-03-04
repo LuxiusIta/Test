@@ -111,8 +111,13 @@ function setupRealtime() {
 // --- NATIVE WEB PUSH: BACKEND TRIGGER ---
 async function sendPushNotification(title, message, targetUser = null) {
     try {
+        const { data: { session } } = await dbClient.auth.getSession();
         const { data, error } = await dbClient.functions.invoke('send-push', {
-            body: { title, message, targetUser }
+            body: { title, message, targetUser },
+            headers: {
+                Authorization: `Bearer ${session?.access_token || ''}`,
+                'Content-Type': 'application/json'
+            }
         });
 
         if (error) throw error;
