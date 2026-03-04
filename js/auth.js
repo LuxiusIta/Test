@@ -116,32 +116,23 @@ function initUserSession(roleData) {
 async function openUserProfile() {
     if (!USER) return;
 
-    // Controlla lo stato attuale delle notifiche OneSignal
-    let isSubscribed = false;
-    if (window.OneSignal) {
-        isSubscribed = window.OneSignal.User.PushSubscription.optedIn;
-    }
-
     const toggleHtml = `
-        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333;">
+        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333; opacity: 0.5;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <i class="bi bi-bell-fill" style="color:var(--accent); font-size:24px;"></i>
                 <div style="text-align:left;">
                     <div style="font-family:'Teko'; font-size:20px; color:#fff; letter-spacing:1px; line-height:1;">NOTIFICHE PUSH</div>
-                    <div style="font-size:12px; color:#888;">Avvisi e Messaggi Chat</div>
+                    <div style="font-size:12px; color:#888;">(Funzionalità disattivata da config)</div>
                 </div>
             </div>
             
             <label class="switch" style="position:relative; display:inline-block; width:60px; height:34px;">
-                <input type="checkbox" id="push-toggle" ${isSubscribed ? 'checked' : ''} onchange="togglePushNotifications(this.checked)" style="opacity:0; width:0; height:0;">
-                <span class="slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:34px;"></span>
+                <input type="checkbox" id="push-toggle" disabled style="opacity:0; width:0; height:0;">
+                <span class="slider round" style="position:absolute; cursor:not-allowed; top:0; left:0; right:0; bottom:0; background-color:#333; transition:.4s; border-radius:34px;"></span>
             </label>
         </div>
         
         <style>
-            .switch input:checked + .slider { background-color: var(--accent); }
-            .switch input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
-            .switch input:checked + .slider:before { transform: translateX(26px); }
             .slider:before { position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background-color:black; transition:.4s; border-radius:50%; }
         </style>
     `;
@@ -171,24 +162,8 @@ async function openUserProfile() {
     });
 }
 
-async function togglePushNotifications(enable) {
-    if (!window.OneSignal) return;
-
-    try {
-        if (enable) {
-            // Su iOS PWA (16.4+) la chiamata deve essere diretta e asincrona legata al click
-            // Utilizziamo optIn() che gestisce l'intero ciclo di vita dell'iscrizione (token e prompt)
-            await window.OneSignal.User.PushSubscription.optIn();
-
-            if (USER && USER.username) {
-                window.OneSignal.login(USER.username);
-            }
-        } else {
-            window.OneSignal.User.PushSubscription.optOut();
-        }
-    } catch (e) {
-        console.error("Errore iOS Push:", e);
-    }
+function togglePushNotifications(enable) {
+    // Inattivato
 }
 
 async function logoutConfirm() {

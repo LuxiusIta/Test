@@ -106,47 +106,9 @@ function setupRealtime() {
         .subscribe();
 }
 
-// --- ONESIGNAL PUSH NOTIFICATION UTILITY ---
-async function sendPushNotification(title, message, targetUser = null) {
-    const appId = "f30c0e52-8b70-44e1-8d2b-7a263e272bc8";
-    const apiKey = "os_v2_app_6mga4uulobcoddjlpitd4jzlzcoh24xyuzouv4uqpsrvjimjhtfaoauzafrl5o6duizhok4wibu4beqq67pjtkeivxfmbdcolhl2ckq";
 
-    const payload = {
-        app_id: appId,
-        headings: { "en": title, "it": title },
-        contents: { "en": message, "it": message },
-        url: window.location.origin + window.location.pathname // Riapre l'app o porta alla tab
-    };
-
-    if (targetUser) {
-        // Invia solo all'utente specifico (es: chat mensione @Mario)
-        payload.include_aliases = { "external_id": [targetUser] };
-        payload.target_channel = "push";
-    } else {
-        // Invia a tutto il database di iscritti attivi
-        payload.included_segments = ["Subscribed Users"];
-    }
-
-    try {
-        const response = await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Basic ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            console.error("OneSignal API Error:", await response.text());
-        }
-    } catch (err) {
-        console.error("Failed to send push notification:", err);
-    }
-}
 
 // --- ESPOSIZIONE GLOBALE (Per chiamate HTML onclick) ---
 window.showLoader = showLoader;
 window.renderQtyBadges = renderQtyBadges;
 window.setupRealtime = setupRealtime;
-window.sendPushNotification = sendPushNotification;
