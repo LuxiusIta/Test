@@ -109,7 +109,58 @@ function initUserSession(roleData) {
     });
 
     // Mostra avvisi attivi dopo il login
-    setTimeout(() => checkAndShowNotices(), 800);
+    setTimeout(() => {
+        checkAndShowNotices().then(() => {
+            // Dopo gli avvisi, controlla se servono le notifiche push
+            checkPushOnboarding();
+        });
+    }, 800);
+}
+
+// --- NATIVE WEB PUSH: ONBOARDING ---
+async function checkPushOnboarding() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    // Controlla se l'utente ha già detto esplicitamente "No" per questa sessione/browser
+    if (localStorage.getItem('push_prompt_dismissed') === 'true') return;
+
+    // Controlla se i permessi sono già stati negati a livello di browser
+    if (Notification.permission === 'denied') return;
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+
+        // Se non è iscritto, mostra il popup carino
+        if (!subscription) {
+            promptPushEnable();
+        }
+    } catch (e) {
+        console.error("Errore controllo push onboarding:", e);
+    }
+}
+
+function promptPushEnable() {
+    Swal.fire({
+        title: '<i class="bi bi-bell-fill" style="color:#FFD700; font-size:32px;"></i><br><span style="font-family:\'Teko\'; font-size:26px; letter-spacing:1px;">ATTIVA LE NOTIFICHE</span>',
+        html: '<div style="font-size:15px; color:#ccc;">Rimani aggiornato su Menzioni in Chat e Avvisi importanti in tempo reale. Vuoi attivarle ora?</div>',
+        background: '#1a1a1a',
+        color: '#fff',
+        showCancelButton: true,
+        confirmButtonColor: '#00e676',
+        cancelButtonColor: '#444',
+        confirmButtonText: '<span style="color:black; font-weight:bold;"><i class="bi bi-check-lg"></i> SÌ, ATTIVA</span>',
+        cancelButtonText: 'Non Ora',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Cliccando Sì, parte la richiesta ufficiale del browser
+            togglePushNotifications(true);
+        } else {
+            // Se dice no, ricordiamocelo per non assillarlo ad ogni login
+            localStorage.setItem('push_prompt_dismissed', 'true');
+        }
+    });
 }
 
 // --- NATIVE WEB PUSH: VAPID KEY ---
