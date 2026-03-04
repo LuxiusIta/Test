@@ -236,6 +236,7 @@ async function togglePushNotifications(enable) {
             // SALVATAGGIO SU SUPABASE
             const { error } = await dbClient.from('push_subscriptions').upsert({
                 username: USER.username,
+                user_id: USER.id,
                 endpoint: subJSON.endpoint,
                 auth_key: subJSON.keys.auth,
                 p256dh_key: subJSON.keys.p256dh
@@ -246,7 +247,7 @@ async function togglePushNotifications(enable) {
             // Update UI success
             if (icon) icon.style.color = '#00e676';
             if (subtext) subtext.innerText = "(Attive ed efficaci)";
-            Toast.fire({ icon: 'success', title: 'Notifiche Attivate!' });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Notifiche Attivate!', showConfirmButton: false, timer: 3000 });
 
         } else {
             // RIMOZIONE ISCRIZIONE
@@ -262,7 +263,7 @@ async function togglePushNotifications(enable) {
             // Update UI success
             if (icon) icon.style.color = '#ff4d4d';
             if (subtext) subtext.innerText = "(Premi per attivare)";
-            Toast.fire({ icon: 'info', title: 'Notifiche Disattivate.' });
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Notifiche Disattivate.', showConfirmButton: false, timer: 3000 });
         }
 
     } catch (err) {
