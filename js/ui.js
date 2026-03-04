@@ -453,7 +453,7 @@ async function sendChatMessage() {
             for (const targetUser of mentionedUsers) {
                 // Non notificare se stessi
                 if (targetUser.toLowerCase() !== USER.username.toLowerCase()) {
-                    sendPushNotification(`Ti ha Menzionato: ${USER.username}`, text, targetUser);
+                    sendPushNotification(text, `Ti ha Menzionato: ${USER.username}`, targetUser);
                 }
             }
         }
@@ -637,7 +637,7 @@ async function publishNotice() {
         const plainText = tempDiv.textContent || tempDiv.innerText || "";
 
         if (typeof sendPushNotification === 'function') {
-            sendPushNotification(`Avviso da: ${USER.username}`, plainText);
+            sendPushNotification(plainText, `Avviso da: ${USER.username}`);
         }
     }
 }
