@@ -440,6 +440,23 @@ async function sendChatMessage() {
         Swal.fire('Errore', 'Impossibile inviare il messaggio', 'error');
     } else {
         fetchChat();
+
+        // --- NATIVE WEB PUSH: CHAT MENTION ---
+        const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+        let match;
+        const mentionedUsers = new Set();
+        while ((match = mentionRegex.exec(text)) !== null) {
+            mentionedUsers.add(match[1]);
+        }
+
+        if (mentionedUsers.size > 0 && typeof sendPushNotification === 'function') {
+            for (const targetUser of mentionedUsers) {
+                // Non notificare se stessi
+                if (targetUser.toLowerCase() !== USER.username.toLowerCase()) {
+                    sendPushNotification(`Ti ha menzionato in Chat: ${USER.username}`, text, targetUser);
+                }
+            }
+        }
     }
 }
 
@@ -613,6 +630,15 @@ async function publishNotice() {
         editor.innerHTML = '';
         Swal.fire({ icon: 'success', title: 'Avviso pubblicato!', timer: 1500, showConfirmButton: false });
         loadNotices();
+
+        // --- NATIVE WEB PUSH: ADMIN NOTICE ---
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const plainText = tempDiv.textContent || tempDiv.innerText || "";
+
+        if (typeof sendPushNotification === 'function') {
+            sendPushNotification(`Avviso da ${USER.username}`, plainText);
+        }
     }
 }
 

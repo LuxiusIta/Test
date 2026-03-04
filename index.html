@@ -11,7 +11,18 @@
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
-    <!-- PUSH NOTIFICATIONS REMOVED PER USER REQUEST -->
+    <!-- NATIVE WEB PUSH: SERVICE WORKER REGISTRATION -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/Test/sw.js').then(function (registration) {
+                    console.log('[Service Worker] Registrato con scope:', registration.scope);
+                }, function (err) {
+                    console.log('[Service Worker] Registrazione fallita:', err);
+                });
+            });
+        }
+    </script>
 
     <!-- PWA & MOBILE ICONS -->
     <meta name="viewport"

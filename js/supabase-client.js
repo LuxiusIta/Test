@@ -108,7 +108,22 @@ function setupRealtime() {
 
 
 
+// --- NATIVE WEB PUSH: BACKEND TRIGGER ---
+async function sendPushNotification(title, message, targetUser = null) {
+    try {
+        const { data, error } = await dbClient.functions.invoke('send-push', {
+            body: { title, message, targetUser }
+        });
+
+        if (error) throw error;
+        console.log("Push sent result:", data);
+    } catch (err) {
+        console.error("Failed to trigger edge function for push:", err);
+    }
+}
+
 // --- ESPOSIZIONE GLOBALE (Per chiamate HTML onclick) ---
 window.showLoader = showLoader;
 window.renderQtyBadges = renderQtyBadges;
 window.setupRealtime = setupRealtime;
+window.sendPushNotification = sendPushNotification;

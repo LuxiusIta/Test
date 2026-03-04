@@ -112,28 +112,68 @@ function initUserSession(roleData) {
     setTimeout(() => checkAndShowNotices(), 800);
 }
 
+// --- NATIVE WEB PUSH: VAPID KEY ---
+const VAPID_PUBLIC_KEY = "BIL65p-ir220b-lge5RIJFbWaNvaMh8Ub_CVN53lnXVCzuXdavKLzgDCc5K-_2mLUiq_SPjWGnoBNgAlz1PFnkU";
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
 // --- USER PROFILE & LOGOUT ---
 async function openUserProfile() {
     if (!USER) return;
 
+    let isSubscribed = false;
+    let pushError = false;
+
+    // Controllo Stato Attuale (Native)
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            isSubscribed = !!subscription;
+        } catch (e) {
+            console.error("Errore controllo push:", e);
+            pushError = true;
+        }
+    } else {
+        pushError = true;
+    }
+
+    const toggleColor = isSubscribed ? '#00e676' : '#ff4d4d'; // Verde se ON, Rosso se OFF
+    const toggleChecked = isSubscribed ? 'checked' : '';
+    const toggleDisabled = pushError ? 'disabled' : '';
+    const cursorStyle = pushError ? 'not-allowed' : 'pointer';
+    const subText = pushError ? "(Non supportato dal browser)" : (isSubscribed ? "(Attive ed efficaci)" : "(Premi per attivare)");
+
     const toggleHtml = `
-        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333; opacity: 0.5;">
+        <div style="background:#111; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-top:20px; border:1px solid #333;">
             <div style="display:flex; align-items:center; gap:10px;">
-                <i class="bi bi-bell-fill" style="color:var(--accent); font-size:24px;"></i>
+                <i class="bi bi-bell-fill" style="color:${toggleColor}; font-size:24px; transition: color 0.3s;" id="push-icon-status"></i>
                 <div style="text-align:left;">
                     <div style="font-family:'Teko'; font-size:20px; color:#fff; letter-spacing:1px; line-height:1;">NOTIFICHE PUSH</div>
-                    <div style="font-size:12px; color:#888;">(Funzionalità disattivata da config)</div>
+                    <div style="font-size:12px; color:#888;" id="push-subtext">${subText}</div>
                 </div>
             </div>
             
             <label class="switch" style="position:relative; display:inline-block; width:60px; height:34px;">
-                <input type="checkbox" id="push-toggle" disabled style="opacity:0; width:0; height:0;">
-                <span class="slider round" style="position:absolute; cursor:not-allowed; top:0; left:0; right:0; bottom:0; background-color:#333; transition:.4s; border-radius:34px;"></span>
+                <input type="checkbox" id="push-toggle" ${toggleChecked} ${toggleDisabled} onchange="togglePushNotifications(this.checked)" style="opacity:0; width:0; height:0;">
+                <span class="slider round" id="push-slider-bg" style="position:absolute; cursor:${cursorStyle}; top:0; left:0; right:0; bottom:0; background-color:${isSubscribed ? '#00e676' : '#333'}; transition:.4s; border-radius:34px;"></span>
             </label>
         </div>
         
         <style>
-            .slider:before { position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background-color:black; transition:.4s; border-radius:50%; }
+            .slider:before { position:absolute; content:""; height:26px; width:26px; left:4px; bottom:4px; background-color:${isSubscribed ? 'white' : '#ff4d4d'}; transition:.4s; border-radius:50%; }
+            input:checked + .slider { background-color: #00e676 !important; }
+            input:checked + .slider:before { transform: translateX(26px); background-color: white !important; }
+            input:not(:checked) + .slider:before { background-color: #ff4d4d !important; }
         </style>
     `;
 
@@ -162,8 +202,75 @@ async function openUserProfile() {
     });
 }
 
-function togglePushNotifications(enable) {
-    // Inattivato
+async function togglePushNotifications(enable) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        Swal.fire('Errore', 'Il tuo browser non supporta le notifiche Web Push native.', 'error');
+        return;
+    }
+
+    const icon = document.getElementById('push-icon-status');
+    const subtext = document.getElementById('push-subtext');
+    const toggleBtn = document.getElementById('push-toggle');
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+
+        if (enable) {
+            // RICHIESTA ISCRIZIONE
+            const permissionResult = await Notification.requestPermission();
+
+            if (permissionResult !== 'granted') {
+                throw new Error('Permesso Notifiche Negato dall\'utente.');
+            }
+
+            subtext.innerText = "Iscrizione in corso...";
+
+            const subscribeOptions = {
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            };
+
+            const pushSubscription = await registration.pushManager.subscribe(subscribeOptions);
+            const subJSON = pushSubscription.toJSON();
+
+            // SALVATAGGIO SU SUPABASE
+            const { error } = await dbClient.from('push_subscriptions').upsert({
+                username: USER.username,
+                endpoint: subJSON.endpoint,
+                auth_key: subJSON.keys.auth,
+                p256dh_key: subJSON.keys.p256dh
+            }, { onConflict: 'endpoint' });
+
+            if (error) throw error;
+
+            // Update UI success
+            if (icon) icon.style.color = '#00e676';
+            if (subtext) subtext.innerText = "(Attive ed efficaci)";
+            Toast.fire({ icon: 'success', title: 'Notifiche Attivate!' });
+
+        } else {
+            // RIMOZIONE ISCRIZIONE
+            const pushSubscription = await registration.pushManager.getSubscription();
+            if (pushSubscription) {
+                // Rimuovi dal Database Supabase
+                await dbClient.from('push_subscriptions').delete().eq('endpoint', pushSubscription.endpoint);
+
+                // Rimuovi dal Browser
+                await pushSubscription.unsubscribe();
+            }
+
+            // Update UI success
+            if (icon) icon.style.color = '#ff4d4d';
+            if (subtext) subtext.innerText = "(Premi per attivare)";
+            Toast.fire({ icon: 'info', title: 'Notifiche Disattivate.' });
+        }
+
+    } catch (err) {
+        console.error("Errore Push Toggle:", err);
+        // Revert toggle UI
+        if (toggleBtn) toggleBtn.checked = !enable;
+        Swal.fire('Attenzione', err.message || 'Errore durante la configurazione.', 'warning');
+    }
 }
 
 async function logoutConfirm() {
