@@ -274,7 +274,7 @@ async function togglePushNotifications(enable) {
                 throw new Error('Permesso Notifiche Negato dall\'utente.');
             }
 
-            subtext.innerText = "Iscrizione in corso...";
+            if (subtext) subtext.innerText = "Iscrizione in corso...";
 
             const subscribeOptions = {
                 userVisibleOnly: true,
