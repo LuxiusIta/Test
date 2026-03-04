@@ -166,19 +166,11 @@
             </div>
 
             <div class="header-controls">
-                <!-- Add Operations Quick Action -->
+                <!-- Add Operations Quick Action (Carrello) -->
                 <button class="icon-btn" onclick="nav('operations')"
                     style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);"
                     title="Nuova Operazione">
                     <i class="bi bi-cart-fill"></i>
-                </button>
-
-                <!-- Add Chat Button -->
-                <button class="icon-btn" onclick="toggleChat()"
-                    style="position:relative; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);">
-                    <i class="bi bi-chat-text-fill"></i>
-                    <span id="chat-badge"
-                        style="display:none; position:absolute; top:0px; right:0px; background:var(--accent); color:black; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:8px; line-height:16px; text-align:center; padding:0 4px; text-shadow:none;">0</span>
                 </button>
 
                 <!-- Add Magazzino Quick Action for Users -->
@@ -193,6 +185,14 @@
                     style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);"
                     title="Vai al Giornaliero">
                     <i class="bi bi-list-ul"></i>
+                </button>
+
+                <!-- Add Chat Button -->
+                <button class="icon-btn" onclick="toggleChat()"
+                    style="position:relative; margin:0; padding:5px; text-shadow: 0 0 8px rgba(255,215,0,0.5);">
+                    <i class="bi bi-chat-text-fill"></i>
+                    <span id="chat-badge"
+                        style="display:none; position:absolute; top:0px; right:0px; background:var(--accent); color:black; font-size:10px; font-weight:bold; height:16px; min-width:16px; border-radius:8px; line-height:16px; text-align:center; padding:0 4px; text-shadow:none;">0</span>
                 </button>
 
                 <!-- Notifications Button -->
